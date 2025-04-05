@@ -19,8 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.data.Note
 import com.example.re7entonnotesapp.viewmodel.NoteViewModel
@@ -68,6 +70,35 @@ fun NoteItem(note: Note, onDelete: (Note) -> Unit) {
         }
     }
 }
+
+
+@Preview(showBackground = true)
+@Composable
+fun NoteListScreenPreview() {
+    val fakeNotes = listOf(
+        Note(title = "Note 1", content = "Content of note 1"),
+        Note(title = "Note 2", content = "Content of note 2")
+    )
+
+    val fakeNavController = rememberNavController()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp) // Use hardcoded dp for preview
+    ) {
+        Button(onClick = { /* Do nothing */ }) {
+            Text(text = "Add Note")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn {
+            items(fakeNotes) { note ->
+                NoteItem(note = note, onDelete = {})
+            }
+        }
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable
