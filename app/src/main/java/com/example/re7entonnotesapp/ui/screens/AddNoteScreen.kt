@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.viewmodel.NoteViewModel
 
+
 @Composable
 fun AddNoteScreen(
     navController: NavController,
@@ -33,36 +34,67 @@ fun AddNoteScreen(
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
 
+    AddNoteContent(
+        title = title,
+        onTitleChange = { title = it },
+        content = content,
+        onContentChange = { content = it },
+        onSave = {
+            viewModel.addNote(title, content)
+            navController.popBackStack()
+        }
+    )
+}
+
+@Composable
+fun AddNoteContent(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    content: String,
+    onContentChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(dimensionResource(id = R.dimen.padding_medium))
+            .padding(dimensionResource(R.dimen.padding_medium)) // Replace resource for preview-safe code
     ) {
         OutlinedTextField(
             value = title,
-            onValueChange = { title = it },
-            label = { Text(text = stringResource(id = R.string.note_title)) },
+            onValueChange = onTitleChange,
+            label = { Text(stringResource(R.string.note_title)) }, // Avoid resource for preview
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.padding_small)))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_small)))
         OutlinedTextField(
             value = content,
-            onValueChange = { content = it },
-            label = { Text(text = stringResource(id = R.string.note_content)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp) // Adjust the height to make it look like a note area
+            onValueChange = onContentChange,
+            label = { Text(stringResource(R.string.note_content)) },
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.padding_medium)))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
         Button(
-            onClick = {
-                viewModel.addNote(title, content)
-                // Navigate back after saving the note
-                navController.popBackStack()
-            },
+            onClick = onSave,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = stringResource(id = R.string.save_note))
+            Text(text = "Save")
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AddNoteContentPreview() {
+    var title by remember { mutableStateOf("Sample Title") }
+    var content by remember { mutableStateOf("This is the note content.") }
+
+    AddNoteContent(
+        title = title,
+        onTitleChange = { title = it },
+        content = content,
+        onContentChange = { content = it },
+        onSave = {
+            println("Saving: $title - $content")
+        }
+    )
 }
