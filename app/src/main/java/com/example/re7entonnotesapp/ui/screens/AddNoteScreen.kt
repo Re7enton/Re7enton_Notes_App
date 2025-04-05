@@ -57,12 +57,12 @@ fun AddNoteContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(dimensionResource(R.dimen.padding_medium)) // Replace resource for preview-safe code
+            .padding(dimensionResource(R.dimen.padding_medium))
     ) {
         OutlinedTextField(
             value = title,
             onValueChange = onTitleChange,
-            label = { Text(stringResource(R.string.note_title)) }, // Avoid resource for preview
+            label = { Text(stringResource(R.string.note_title)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_small)))
