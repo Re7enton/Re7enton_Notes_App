@@ -70,7 +70,7 @@ fun AddNoteContent(
             value = content,
             onValueChange = onContentChange,
             label = { Text(stringResource(R.string.note_content)) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().height(200.dp)
         )
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
         Button(
