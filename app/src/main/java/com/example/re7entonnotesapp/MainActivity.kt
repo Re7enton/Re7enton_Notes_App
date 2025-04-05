@@ -17,6 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.re7entonnotesapp.ui.screens.AddNoteScreen
 import com.example.re7entonnotesapp.ui.screens.NoteListScreen
 
 @AndroidEntryPoint
@@ -36,9 +37,9 @@ class MainActivity : ComponentActivity() {
                         composable("noteList") {
                             NoteListScreen(navController = navController)
                         }
-//                        composable("addNote") {
-//                            AddNoteScreen(navController = navController)
-//                        }
+                        composable("addNote") {
+                            AddNoteScreen(navController = navController)
+                        }
                     }
                 }
             }
