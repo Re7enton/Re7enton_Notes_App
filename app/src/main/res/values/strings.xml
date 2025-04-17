@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Re7entonNotesApp</string>
+    <string name="add_note">Add Note</string>
+    <string name="note_title">Title</string>
+    <string name="note_content">Content</string>
+    <string name="save_note">Save Note</string>
+    <string name="delete">Delete</string>
 </resources>
