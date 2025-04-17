@@ -33,4 +33,11 @@ class NoteViewModel @Inject constructor(
             repository.delete(note)
         }
     }
+
+    // Update a note
+    fun updateNote(note: Note) {
+        viewModelScope.launch {
+            repository.update(note.copy(lastEdited = System.currentTimeMillis()))
+        }
+    }
 }
