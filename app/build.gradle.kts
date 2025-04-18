@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.work.manager)
 
     testImplementation(libs.junit)
 
