@@ -51,18 +51,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        val workRequest = PeriodicWorkRequestBuilder<SyncNotesWorker>(1, TimeUnit.HOURS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "SyncNotesWork",
-            ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
-        )
     }
 }
