@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,6 +28,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.data.Note
 import com.example.re7entonnotesapp.viewmodel.NoteViewModel
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun NoteListScreen(
@@ -46,27 +50,34 @@ fun NoteListScreen(
         Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.padding_medium)))
         LazyColumn {
             items(notes) { note ->
-                NoteItem(note = note, onDelete = { viewModel.deleteNote(it) })
+                NoteItem(note = note, onEdit = {/* TODO */}, onDelete = { viewModel.deleteNote(it) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: Note, onDelete: (Note) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = dimensionResource(id = R.dimen.padding_small))
-            .clickable { /* Future: navigate to detail/edit screen */ },
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Text(text = note.title)
-            Text(text = note.content)
-        }
-        Button(onClick = { onDelete(note) }) {
-            Text(text = stringResource(id = R.string.delete))
+fun NoteItem(note: Note,
+             onEdit: (Note) -> Unit,
+             onDelete: (Note) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Text(text = note.title,
+            style = MaterialTheme.typography.titleSmall)
+        Text(text = note.content,
+            style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = "Last edited: ${DateFormat.getDateTimeInstance().format(Date(note.lastEdited))}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Row {
+            Button(onClick = { onEdit(note) }) {
+                Text("Edit")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = { onDelete(note) }) {
+                Text("Delete")
+            }
         }
     }
 }
@@ -93,7 +104,7 @@ fun NoteListScreenPreview() {
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn {
             items(fakeNotes) { note ->
-                NoteItem(note = note, onDelete = {})
+                NoteItem(note = note, onEdit = {/* TODO */}, onDelete = {})
             }
         }
     }
@@ -103,12 +114,16 @@ fun NoteListScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun NoteItemPreview() {
-    // Sample note data
     val sampleNote = Note(
         title = "Sample Note",
-        content = "This is a preview of the note content."
+        content = "This is a sample note for preview purposes.",
+        lastEdited = System.currentTimeMillis()
     )
 
-    // Preview the NoteItem with a dummy onDelete
-    NoteItem(note = sampleNote, onDelete = {})
+    // Use dummy lambdas for preview
+    NoteItem(
+        note = sampleNote,
+        onEdit = {},
+        onDelete = {}
+    )
 }
