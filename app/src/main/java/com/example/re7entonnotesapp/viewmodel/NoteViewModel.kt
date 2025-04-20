@@ -33,4 +33,8 @@ class NoteViewModel @Inject constructor(
             repository.delete(note)
         }
     }
+
+//    Sync and fetch notes from the server:
+    fun syncNotes() = viewModelScope.launch { repository.syncNotesWithServer() }
+    fun fetchNotes() = viewModelScope.launch { repository.fetchNotesFromServerAndUpdateDb() }
 }

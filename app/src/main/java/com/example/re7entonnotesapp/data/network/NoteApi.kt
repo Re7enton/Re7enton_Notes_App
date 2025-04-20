@@ -6,7 +6,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
-class NoteApi(private val client: HttpClient) {
+class NoteApi(
+    private val client: HttpClient
+) {
 
     private val baseUrl = "http://10.0.2.2:8080/notes"
 
