@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.re7entonnotesapp.data.NoteDao
 import com.example.re7entonnotesapp.data.NoteDatabase
-import com.example.re7entonnotesapp.data.remote.NoteApi
+import com.example.re7entonnotesapp.data.network.NoteApi
 import com.example.re7entonnotesapp.repository.NoteRepository
 import dagger.Module
 import dagger.Provides
