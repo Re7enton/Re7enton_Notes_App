@@ -34,7 +34,18 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-//    Sync and fetch notes from the server:
-    fun syncNotes() = viewModelScope.launch { repository.syncNotesWithServer() }
-    fun fetchNotes() = viewModelScope.launch { repository.fetchNotesFromServerAndUpdateDb() }
+    // Update a note with a timestamp
+    fun updateNote(note: Note) {
+        viewModelScope.launch {
+            repository.update(note.copy(lastEdited = System.currentTimeMillis()))
+        }
+    }
+
+//    Syncing notes with a server
+    fun syncNotes() = viewModelScope.launch {
+        repository.syncNotesWithServer()
+    }
+    fun fetchNotes() = viewModelScope.launch {
+        repository.fetchNotesFromServerAndUpdateDb()
+    }
 }

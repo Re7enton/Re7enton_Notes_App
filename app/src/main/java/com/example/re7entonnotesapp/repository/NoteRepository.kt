@@ -29,7 +29,6 @@ suspend fun syncNotesWithServer() {
         api.postNote(it.toDto())
     }
 }
-
     suspend fun fetchNotesFromServerAndUpdateDb() {
         api.fetchNotes().forEach {
             noteDao.insert(it.toEntity())
