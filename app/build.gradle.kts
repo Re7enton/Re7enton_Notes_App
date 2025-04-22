@@ -66,6 +66,9 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.work.manager)
+//    implementation(libs.kotlin.kapt)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
 

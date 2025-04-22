@@ -16,6 +16,7 @@ ktor = "3.1.1"
 ksp = "2.1.10-1.0.31"
 workManager = "2.10.0"
 #kapt = "2.1.20"
+hilt-work = "1.0.0"
 
 
 [libraries]
@@ -47,6 +48,8 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 work-manager = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 #kotlin-kapt = { module = "org.jetbrains:kotlin.kapt", version.ref = "kapt" }
+hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
+hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
