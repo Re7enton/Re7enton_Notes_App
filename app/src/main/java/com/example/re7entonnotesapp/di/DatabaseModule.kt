@@ -25,7 +25,7 @@ object DatabaseModule {
     @Provides
     fun provideNoteDatabase(@ApplicationContext context: Context): NoteDatabase =
         Room.databaseBuilder(
-            context,
+            context.applicationContext,
             NoteDatabase::class.java,
             "notes_db"
         ).build()
@@ -46,7 +46,8 @@ object DatabaseModule {
     @Singleton
     fun provideNoteApi(client: HttpClient) = NoteApi(client)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideRepository(dao: NoteDao, api: NoteApi) =
         NoteRepository(dao, api)
 }

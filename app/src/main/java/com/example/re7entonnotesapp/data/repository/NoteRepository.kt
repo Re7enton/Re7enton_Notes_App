@@ -19,19 +19,19 @@ class NoteRepository @Inject constructor(
 
 //    Local methods:
     fun getAllNotes(): Flow<List<NoteEntity>> = noteDao.getAllNotes()
-    suspend fun insert(noteEntity: NoteEntity) = noteDao.insert(noteEntity)
-    suspend fun update(noteEntity: NoteEntity) = noteDao.update(noteEntity)
-    suspend fun delete(noteEntity: NoteEntity) = noteDao.delete(noteEntity)
+    suspend fun insert(noteEntity: NoteEntity) = noteDao.insertNote(noteEntity)
+    suspend fun update(noteEntity: NoteEntity) = noteDao.updateNote(noteEntity)
+    suspend fun delete(noteEntity: NoteEntity) = noteDao.deleteNote(noteEntity)
 
 //    Remote methods:
-suspend fun syncNotesWithServer() {
+    suspend fun syncNotesWithServer() {
     noteDao.getAllNotes().first().forEach {
         api.postNote(it.toDto())
     }
 }
     suspend fun fetchNotesFromServerAndUpdateDb() {
         api.fetchNotes().forEach {
-            noteDao.insert(it.toEntity())
+            noteDao.insertNote(it.toEntity())
         }
     }
 }
