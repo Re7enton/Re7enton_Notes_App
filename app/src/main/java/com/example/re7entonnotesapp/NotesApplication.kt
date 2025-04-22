@@ -22,6 +22,7 @@ class NotesApplication : Application(), Configuration.Provider {
         noteSyncScheduler.scheduleNoteSyncWorker()
     }
 
+    // This connects Hilt to WorkManager
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
