@@ -13,7 +13,9 @@ class NoteSyncScheduler @Inject constructor(
 ) {
 
     fun scheduleNoteSyncWorker() {
-        val workRequest = PeriodicWorkRequestBuilder<SyncNotesWorker>(1, TimeUnit.HOURS)
+        val workRequest = PeriodicWorkRequestBuilder<SyncNotesWorker>(
+            1, TimeUnit.HOURS
+        )
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
