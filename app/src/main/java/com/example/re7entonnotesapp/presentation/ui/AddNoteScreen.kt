@@ -1,4 +1,4 @@
-package com.example.re7entonnotesapp.ui.screens
+package com.example.re7entonnotesapp.presentation.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,9 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
-import com.example.re7entonnotesapp.viewmodel.NoteViewModel
+import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
 
 
 @Composable

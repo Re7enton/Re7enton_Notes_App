@@ -1,4 +1,4 @@
-package com.example.re7entonnotesapp.data.network.dto
+package com.example.re7entonnotesapp.data.remote
 
 import kotlinx.serialization.Serializable
 

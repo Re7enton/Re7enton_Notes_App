@@ -1,6 +1,5 @@
-package com.example.re7entonnotesapp.data.network
+package com.example.re7entonnotesapp.data.remote
 
-import com.example.re7entonnotesapp.data.network.dto.NoteDto
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*

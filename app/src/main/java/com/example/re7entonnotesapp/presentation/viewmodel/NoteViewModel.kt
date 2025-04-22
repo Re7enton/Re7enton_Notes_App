@@ -1,9 +1,9 @@
-package com.example.re7entonnotesapp.viewmodel
+package com.example.re7entonnotesapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.re7entonnotesapp.data.Note
-import com.example.re7entonnotesapp.repository.NoteRepository
+import com.example.re7entonnotesapp.data.local.NoteEntity
+import com.example.re7entonnotesapp.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,27 +17,27 @@ class NoteViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Expose notes as a StateFlow to be observed in the UI.
-    val notes: StateFlow<List<Note>> = repository.getAllNotes()
+    val notes: StateFlow<List<NoteEntity>> = repository.getAllNotes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     // Add a note
     fun addNote(title: String, content: String) {
         viewModelScope.launch {
-            repository.insert(Note(title = title, content = content))
+            repository.insert(NoteEntity(title = title, content = content))
         }
     }
 
     // Delete a note
-    fun deleteNote(note: Note) {
+    fun deleteNote(noteEntity: NoteEntity) {
         viewModelScope.launch {
-            repository.delete(note)
+            repository.delete(noteEntity)
         }
     }
 
     // Update a note with a timestamp
-    fun updateNote(note: Note) {
+    fun updateNote(noteEntity: NoteEntity) {
         viewModelScope.launch {
-            repository.update(note.copy(lastEdited = System.currentTimeMillis()))
+            repository.update(noteEntity.copy(lastEdited = System.currentTimeMillis()))
         }
     }
 

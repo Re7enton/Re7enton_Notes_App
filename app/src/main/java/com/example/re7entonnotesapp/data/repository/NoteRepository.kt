@@ -1,10 +1,10 @@
-package com.example.re7entonnotesapp.repository
+package com.example.re7entonnotesapp.data.repository
 
-import com.example.re7entonnotesapp.data.Note
-import com.example.re7entonnotesapp.data.NoteDao
+import com.example.re7entonnotesapp.data.local.NoteEntity
+import com.example.re7entonnotesapp.data.local.NoteDao
 import com.example.re7entonnotesapp.data.mappers.toDto
 import com.example.re7entonnotesapp.data.mappers.toEntity
-import com.example.re7entonnotesapp.data.network.NoteApi
+import com.example.re7entonnotesapp.data.remote.NoteApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -18,10 +18,10 @@ class NoteRepository @Inject constructor(
 ) {
 
 //    Local methods:
-    fun getAllNotes(): Flow<List<Note>> = noteDao.getAllNotes()
-    suspend fun insert(note: Note) = noteDao.insert(note)
-    suspend fun update(note: Note) = noteDao.update(note)
-    suspend fun delete(note: Note) = noteDao.delete(note)
+    fun getAllNotes(): Flow<List<NoteEntity>> = noteDao.getAllNotes()
+    suspend fun insert(noteEntity: NoteEntity) = noteDao.insert(noteEntity)
+    suspend fun update(noteEntity: NoteEntity) = noteDao.update(noteEntity)
+    suspend fun delete(noteEntity: NoteEntity) = noteDao.delete(noteEntity)
 
 //    Remote methods:
 suspend fun syncNotesWithServer() {

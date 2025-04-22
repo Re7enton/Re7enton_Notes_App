@@ -1,4 +1,4 @@
-package com.example.re7entonnotesapp.ui.theme
+package com.example.re7entonnotesapp.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

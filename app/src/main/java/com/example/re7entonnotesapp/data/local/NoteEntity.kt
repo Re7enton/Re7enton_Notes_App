@@ -1,10 +1,10 @@
-package com.example.re7entonnotesapp.data
+package com.example.re7entonnotesapp.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "notes")
-data class Note(
+data class NoteEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,

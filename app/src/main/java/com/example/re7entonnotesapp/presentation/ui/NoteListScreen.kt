@@ -1,7 +1,5 @@
-package com.example.re7entonnotesapp.ui.screens
+package com.example.re7entonnotesapp.presentation.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,8 +24,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
-import com.example.re7entonnotesapp.data.Note
-import com.example.re7entonnotesapp.viewmodel.NoteViewModel
+import com.example.re7entonnotesapp.data.local.NoteEntity
+import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
 import java.text.DateFormat
 import java.util.Date
 
@@ -50,32 +48,32 @@ fun NoteListScreen(
         Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.padding_medium)))
         LazyColumn {
             items(notes) { note ->
-                NoteItem(note = note, onEdit = {/* TODO */}, onDelete = { viewModel.deleteNote(it) })
+                NoteItem(noteEntity = note, onEdit = {/* TODO */}, onDelete = { viewModel.deleteNote(it) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: Note,
-             onEdit: (Note) -> Unit,
-             onDelete: (Note) -> Unit
+fun NoteItem(noteEntity: NoteEntity,
+             onEdit: (NoteEntity) -> Unit,
+             onDelete: (NoteEntity) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Text(text = note.title,
+        Text(text = noteEntity.title,
             style = MaterialTheme.typography.titleSmall)
-        Text(text = note.content,
+        Text(text = noteEntity.content,
             style = MaterialTheme.typography.bodyMedium)
         Text(
-            text = "Last edited: ${DateFormat.getDateTimeInstance().format(Date(note.lastEdited))}",
+            text = "Last edited: ${DateFormat.getDateTimeInstance().format(Date(noteEntity.lastEdited))}",
             style = MaterialTheme.typography.labelSmall
         )
         Row {
-            Button(onClick = { onEdit(note) }) {
+            Button(onClick = { onEdit(noteEntity) }) {
                 Text("Edit")
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { onDelete(note) }) {
+            Button(onClick = { onDelete(noteEntity) }) {
                 Text("Delete")
             }
         }
@@ -86,9 +84,9 @@ fun NoteItem(note: Note,
 @Preview(showBackground = true)
 @Composable
 fun NoteListScreenPreview() {
-    val fakeNotes = listOf(
-        Note(title = "Note 1", content = "Content of note 1"),
-        Note(title = "Note 2", content = "Content of note 2")
+    val fakeNoteEntities = listOf(
+        NoteEntity(title = "Note 1", content = "Content of note 1"),
+        NoteEntity(title = "Note 2", content = "Content of note 2")
     )
 
     val fakeNavController = rememberNavController()
@@ -103,8 +101,8 @@ fun NoteListScreenPreview() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn {
-            items(fakeNotes) { note ->
-                NoteItem(note = note, onEdit = {/* TODO */}, onDelete = {})
+            items(fakeNoteEntities) { note ->
+                NoteItem(noteEntity = note, onEdit = {/* TODO */}, onDelete = {})
             }
         }
     }
@@ -114,7 +112,7 @@ fun NoteListScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun NoteItemPreview() {
-    val sampleNote = Note(
+    val sampleNoteEntity = NoteEntity(
         title = "Sample Note",
         content = "This is a sample note for preview purposes.",
         lastEdited = System.currentTimeMillis()
@@ -122,7 +120,7 @@ fun NoteItemPreview() {
 
     // Use dummy lambdas for preview
     NoteItem(
-        note = sampleNote,
+        noteEntity = sampleNoteEntity,
         onEdit = {},
         onDelete = {}
     )

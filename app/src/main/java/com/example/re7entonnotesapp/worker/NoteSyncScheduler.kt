@@ -2,6 +2,7 @@ package com.example.re7entonnotesapp.worker
 
 import android.content.Context
 import androidx.work.*
+import com.example.re7entonnotesapp.sync.SyncNotesWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

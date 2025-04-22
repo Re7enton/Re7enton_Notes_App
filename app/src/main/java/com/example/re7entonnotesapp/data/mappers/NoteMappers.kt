@@ -1,7 +1,7 @@
 package com.example.re7entonnotesapp.data.mappers
 
-import com.example.re7entonnotesapp.data.Note
-import com.example.re7entonnotesapp.data.network.dto.NoteDto
+import com.example.re7entonnotesapp.data.local.NoteEntity
+import com.example.re7entonnotesapp.data.remote.NoteDto
 
-fun Note.toDto() = NoteDto(id, title, content, timestamp, lastEdited)
-fun NoteDto.toEntity() = Note(id, title, content, timestamp, lastEdited)
+fun NoteEntity.toDto() = NoteDto(id, title, content, timestamp, lastEdited)
+fun NoteDto.toEntity() = NoteEntity(id, title, content, timestamp, lastEdited)
