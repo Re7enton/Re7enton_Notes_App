@@ -2,8 +2,7 @@ package com.example.re7entonnotesapp.worker
 
 import android.content.Context
 import androidx.work.*
-import com.example.re7entonnotesapp.sync.SyncWorker
-import javax.inject.Singleton
+import com.example.re7entonnotesapp.sync.SyncNotesWorker
 import java.util.concurrent.TimeUnit
 
 
@@ -15,7 +14,7 @@ object NoteSyncScheduler {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+        val request = PeriodicWorkRequestBuilder<SyncNotesWorker>(15, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
