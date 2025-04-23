@@ -8,8 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.domain.model.Note
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,14 +35,20 @@ fun NoteDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (noteId == 0L) "New Note" else "Edit Note",
+                        if (noteId == 0L)
+                            stringResource(R.string.new_note)
+                        else
+                            stringResource(R.string.edit_note),
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 actions = {
                     if (noteId != 0L) {
                         IconButton(onClick = onDelete) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = stringResource(R.string.delete)
+                            )
                         }
                     }
                 }
@@ -48,10 +56,13 @@ fun NoteDetailScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onSave(title, content) }) {
-                Icon(Icons.Filled.Check, contentDescription = "Save")
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = stringResource(R.string.save_note)
+                )
             }
-        },
-        content = { paddingValues ->                      // apply paddingValues :contentReference[oaicite:2]{index=2}
+        }
+    ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -61,21 +72,20 @@ fun NoteDetailScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text(stringResource(R.string.note_title)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    label = { Text("Content") },
+                    label = { Text(stringResource(R.string.note_content)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
                 )
             }
         }
-    )
 }
 
 @Preview(showBackground = true)
