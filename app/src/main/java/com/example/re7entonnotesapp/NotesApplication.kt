@@ -9,23 +9,10 @@ import javax.inject.Inject
 
 // Annotate the application class to trigger Hilt's code generation.
 @HiltAndroidApp
-class NotesApplication : Application(), Configuration.Provider {
-
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
-
-    @Inject
-    lateinit var noteSyncScheduler: NoteSyncScheduler
-
+class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        noteSyncScheduler.scheduleNoteSyncWorker()
+        // start your periodic sync worker
+        NoteSyncScheduler.scheduleSync(this)
     }
-
-    // This connects Hilt to WorkManager
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
 }
-
