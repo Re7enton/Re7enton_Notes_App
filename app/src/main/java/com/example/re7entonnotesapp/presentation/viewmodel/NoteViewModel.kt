@@ -3,7 +3,7 @@ package com.example.re7entonnotesapp.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.re7entonnotesapp.data.local.NoteEntity
-import com.example.re7entonnotesapp.data.repository.NoteRepository
+import com.example.re7entonnotesapp.data.repository.`NoteRepositoryImpl.kt`
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
-    private val repository: NoteRepository
+    private val repository: `NoteRepositoryImpl.kt`
 ) : ViewModel() {
 
     // Expose notes as a StateFlow to be observed in the UI.
