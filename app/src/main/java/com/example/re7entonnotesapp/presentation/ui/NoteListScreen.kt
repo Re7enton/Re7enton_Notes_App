@@ -29,10 +29,14 @@ fun NoteListScreen(
     val noteList by notes.collectAsState()
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
         floatingActionButton = {
             FloatingActionButton(onClick = onAddNote) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_note))
-            }}) { paddingValues ->
+            }}
+    ) { paddingValues ->
             if (noteList.isEmpty()) {
                 Box(
                     modifier = Modifier

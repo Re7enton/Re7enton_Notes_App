@@ -41,6 +41,9 @@ fun NoteDetailScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
         topBar = {
             TopAppBar(
                 title = {
