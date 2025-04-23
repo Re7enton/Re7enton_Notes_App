@@ -4,29 +4,29 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import javax.inject.Inject
 
-class NoteApi(
-    private val client: HttpClient
-) {
+interface NotesApi {
+    suspend fun getNotes(): List<NoteDto>
+    suspend fun addNote(note: NoteDto)
+    suspend fun deleteNote(id: Long)
+}
 
-    private val baseUrl = "http://10.0.2.2:8080/notes"
+class NotesApiImpl @Inject constructor(
+    private val client: HttpClient,
+    private val baseUrl: String
+) : NotesApi {
 
-    suspend fun fetchNotes(): List<NoteDto> =
-        client.get(baseUrl).body()
+    override suspend fun getNotes(): List<NoteDto> =
+        client.get("$baseUrl/notes").body()
 
-    suspend fun postNote(dto: NoteDto): NoteDto =
-        client.post(baseUrl) {
-            contentType(ContentType.Application.Json)
-            setBody(dto)
-        }.body()
+    override suspend fun addNote(note: NoteDto) {
+        client.post("$baseUrl/notes") {
+            setBody(note)
+        }
+    }
 
-    suspend fun updateNote(dto: NoteDto): NoteDto =
-        client.put("$baseUrl/${dto.id}") {
-            contentType(ContentType.Application.Json)
-            setBody(dto)
-        }.body()
-
-    suspend fun deleteNote(id: Int) {
-        client.delete("$baseUrl/$id")
+    override suspend fun deleteNote(id: Long) {
+        client.delete("$baseUrl/notes/$id")
     }
 }

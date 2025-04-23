@@ -4,9 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class NoteDto(
-    val id: Int,
+    val id: Long,
     val title: String,
     val content: String,
-    val timestamp: Long,
-    val lastEdited: Long
+    val updatedAt: Long
 )

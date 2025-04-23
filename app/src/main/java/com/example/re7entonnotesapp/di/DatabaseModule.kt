@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.example.re7entonnotesapp.data.local.NoteDao
 import com.example.re7entonnotesapp.data.local.NoteDatabase
-import com.example.re7entonnotesapp.data.remote.NoteApi
 import com.example.re7entonnotesapp.data.repository.NoteRepository
 import dagger.Module
 import dagger.Provides
@@ -33,21 +32,4 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideNoteDao(database: NoteDatabase) = database.noteDao()
-
-    @Provides
-    @Singleton
-    fun provideHttpClient() = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json()
-        }
-    }
-
-    @Provides
-    @Singleton
-    fun provideNoteApi(client: HttpClient) = NoteApi(client)
-
-    @Provides
-    @Singleton
-    fun provideRepository(dao: NoteDao, api: NoteApi) =
-        NoteRepository(dao, api)
 }
