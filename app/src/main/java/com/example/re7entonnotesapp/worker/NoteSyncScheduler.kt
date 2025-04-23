@@ -5,7 +5,6 @@ import androidx.work.*
 import com.example.re7entonnotesapp.sync.SyncNotesWorker
 import java.util.concurrent.TimeUnit
 
-
 object NoteSyncScheduler {
     private const val UNIQUE_WORK_NAME = "NotesSyncWork"
 

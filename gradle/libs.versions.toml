@@ -48,7 +48,6 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 work-manager = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
-#kotlin-kapt = { module = "org.jetbrains:kotlin.kapt", version.ref = "kapt" }
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
 hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-work" }
 
