@@ -2,8 +2,11 @@ package com.example.re7entonnotesapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.re7entonnotesapp.data.local.NoteEntity
-import com.example.re7entonnotesapp.data.repository.`NoteRepositoryImpl.kt`
+import com.example.re7entonnotesapp.domain.model.Note
+import com.example.re7entonnotesapp.domain.usecase.AddNoteUseCase
+import com.example.re7entonnotesapp.domain.usecase.DeleteNoteUseCase
+import com.example.re7entonnotesapp.domain.usecase.GetNotesUseCase
+import com.example.re7entonnotesapp.domain.usecase.SyncNotesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,39 +16,41 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
-    private val repository: `NoteRepositoryImpl.kt`
+    getNotes: GetNotesUseCase,
+    private val addNote: AddNoteUseCase,
+    private val deleteNote: DeleteNoteUseCase,
+    private val syncNotes: SyncNotesUseCase
 ) : ViewModel() {
 
-    // Expose notes as a StateFlow to be observed in the UI.
-    val notes: StateFlow<List<NoteEntity>> = repository.getAllNotes()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+    /** Exposed to UI: current list of notes */
+    val notes: StateFlow<List<Note>> =
+        getNotes()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
 
-    // Add a note
-    fun addNote(title: String, content: String) {
+    /** Called by UI to add or update a note */
+    fun saveNote(title: String, content: String, id: Long = 0L) {
+        val now = System.currentTimeMillis()
+        val note = Note(id = id, title = title, content = content, updatedAt = now)
         viewModelScope.launch {
-            repository.insert(NoteEntity(title = title, content = content))
+            addNote(note)
         }
     }
 
-    // Delete a note
-    fun deleteNote(noteEntity: NoteEntity) {
+    /** Called by UI to delete a note */
+    fun removeNote(id: Long) {
         viewModelScope.launch {
-            repository.delete(noteEntity)
+            deleteNote(id)
         }
     }
 
-    // Update a note with a timestamp
-    fun updateNote(noteEntity: NoteEntity) {
+    /** Called by UI or WorkManager to sync with server */
+    fun sync() {
         viewModelScope.launch {
-            repository.update(noteEntity.copy(lastEdited = System.currentTimeMillis()))
+            syncNotes()
         }
-    }
-
-//    Syncing notes with a server
-    fun syncNotes() = viewModelScope.launch {
-        repository.syncNotesWithServer()
-    }
-    fun fetchNotes() = viewModelScope.launch {
-        repository.fetchNotesFromServerAndUpdateDb()
     }
 }
