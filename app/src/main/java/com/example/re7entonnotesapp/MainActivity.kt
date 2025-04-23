@@ -36,20 +36,20 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         // List Screen
-                        composable(NavRoutes.NOTE_LIST) {
+                        composable(
+                            NavRoutes.NOTE_LIST) {
                             val vm: NoteViewModel = hiltViewModel()
                             NoteListScreen(
                                 notes = vm.notes,
                                 onAddNote = { navController.navigate(NavRoutes.noteDetailRoute(0L)) },
-                                onEditNote = { id -> navController.navigate(NavRoutes.noteDetailRoute(id)) }
+                                onEditNote = { navController.navigate(NavRoutes.noteDetailRoute(it)) }
                             )
                         }
                         // Detail Screen with noteId arg
                         composable(
                             route = "${NavRoutes.NOTE_DETAIL}/{${NavRoutes.ARG_NOTE_ID}}",
                             arguments = listOf(navArgument(NavRoutes.ARG_NOTE_ID) {
-                                type = NavType.LongType
-                            })
+                                type = NavType.LongType } )
                         ) { backStackEntry ->
                             val id = backStackEntry.arguments?.getLong(NavRoutes.ARG_NOTE_ID) ?: 0L
                             val vm: NoteViewModel = hiltViewModel()
