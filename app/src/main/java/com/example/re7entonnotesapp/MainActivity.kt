@@ -62,9 +62,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onDelete = {
                                     if (id != 0L) vm.removeNote(id)
-                                    navController.popBackStack()
-                                }
-                            )
+                                    navController.popBackStack() },
+                                onCancel  = { navController.popBackStack() } )
                         }
                     }
                 }

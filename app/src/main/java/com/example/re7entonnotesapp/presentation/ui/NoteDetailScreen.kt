@@ -3,6 +3,7 @@ package com.example.re7entonnotesapp.presentation.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,13 +23,22 @@ fun NoteDetailScreen(
     noteId: Long,
     notesFlow: StateFlow<List<Note>>,
     onSave: (String, String) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onCancel: () -> Unit
 ) {
     val notes by notesFlow.collectAsState()
-    val existing = notes.find { it.id == noteId }
+    val existing = remember(notes) { notes.find { it.id == noteId } }
 
-    var title by rememberSaveable { mutableStateOf(existing?.title.orEmpty()) }
-    var content by rememberSaveable { mutableStateOf(existing?.content.orEmpty()) }
+    // reset whenever `existing` changes
+    var title by rememberSaveable(existing?.id) { mutableStateOf("") }
+    var content by rememberSaveable(existing?.id) { mutableStateOf("") }
+
+    LaunchedEffect(existing) {
+        existing?.let {
+            title = it.title
+            content = it.content
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -41,6 +51,11 @@ fun NoteDetailScreen(
                             stringResource(R.string.edit_note),
                         style = MaterialTheme.typography.titleLarge
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onCancel) {
+                        Icon(Icons.Filled.Close, contentDescription = "Cancel")
+                    }
                 },
                 actions = {
                     if (noteId != 0L) {
@@ -99,6 +114,7 @@ fun NoteDetailScreenPreview() {
         noteId = 1L,
         notesFlow = notesFlow,
         onSave = { _, _ -> },
-        onDelete = {}
+        onDelete = {},
+        onCancel = {}
     )
 }
