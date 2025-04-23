@@ -1,127 +1,102 @@
 package com.example.re7entonnotesapp.presentation.ui
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.re7entonnotesapp.R
-import com.example.re7entonnotesapp.data.local.NoteEntity
-import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
-import java.text.DateFormat
-import java.util.Date
+import com.example.re7entonnotesapp.domain.model.Note
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun NoteListScreen(
-    navController: NavController,
-    viewModel: NoteViewModel = hiltViewModel() // Hilt provides the ViewModel
+    notes: StateFlow<List<Note>>,
+    onAddNote: () -> Unit,
+    onEditNote: (Long) -> Unit
 ) {
-    val notes = viewModel.notes.collectAsState().value
+    val noteList by notes.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(dimensionResource(id = R.dimen.padding_medium))
-    ) {
-        // Button to navigate to add note screen
-        Button(onClick = { navController.navigate("addNote") }) {
-            Text(text = stringResource(id = R.string.add_note))
-        }
-        Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.padding_medium)))
-        LazyColumn {
-            items(notes) { note ->
-                NoteItem(noteEntity = note, onEdit = {/* TODO */}, onDelete = { viewModel.deleteNote(it) })
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddNote) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_note))
+            }}) { paddingValues ->
+            if (noteList.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.no_notes),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = paddingValues,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    items(noteList) { note ->
+                        NoteListItem(note, onClick = { onEditNote(note.id) })
+                        HorizontalDivider()
+                    }
+                }
             }
-        }
     }
 }
 
 @Composable
-fun NoteItem(noteEntity: NoteEntity,
-             onEdit: (NoteEntity) -> Unit,
-             onDelete: (NoteEntity) -> Unit
+private fun NoteListItem(
+    note: Note,
+    onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Text(text = noteEntity.title,
-            style = MaterialTheme.typography.titleSmall)
-        Text(text = noteEntity.content,
-            style = MaterialTheme.typography.bodyMedium)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp)
+    ) {
         Text(
-            text = "Last edited: ${DateFormat.getDateTimeInstance().format(Date(noteEntity.lastEdited))}",
-            style = MaterialTheme.typography.labelSmall
+            note.title,
+            style = MaterialTheme.typography.titleMedium        // a bit smaller than titleLarge
         )
-        Row {
-            Button(onClick = { onEdit(noteEntity) }) {
-                Text("Edit")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { onDelete(noteEntity) }) {
-                Text("Delete")
-            }
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            note.content,
+            modifier = Modifier.size(100.dp),
+            style = MaterialTheme.typography.bodyMedium,
+
+        )
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
 fun NoteListScreenPreview() {
-    val fakeNoteEntities = listOf(
-        NoteEntity(title = "Note 1", content = "Content of note 1"),
-        NoteEntity(title = "Note 2", content = "Content of note 2")
+    val sampleNotes = listOf(
+        Note(1L, "First", "Content of first note", System.currentTimeMillis()),
+        Note(2L, "Second", "Another note here", System.currentTimeMillis())
     )
-
-    val fakeNavController = rememberNavController()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp) // Use hardcoded dp for preview
-    ) {
-        Button(onClick = { /* Do nothing */ }) {
-            Text(text = "Add Note")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn {
-            items(fakeNoteEntities) { note ->
-                NoteItem(noteEntity = note, onEdit = {/* TODO */}, onDelete = {})
-            }
-        }
-    }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun NoteItemPreview() {
-    val sampleNoteEntity = NoteEntity(
-        title = "Sample Note",
-        content = "This is a sample note for preview purposes.",
-        lastEdited = System.currentTimeMillis()
-    )
-
-    // Use dummy lambdas for preview
-    NoteItem(
-        noteEntity = sampleNoteEntity,
-        onEdit = {},
-        onDelete = {}
+    val notesFlow = MutableStateFlow(sampleNotes)
+    NoteListScreen(
+        notes = notesFlow,
+        onAddNote = {},
+        onEditNote = {}
     )
 }
