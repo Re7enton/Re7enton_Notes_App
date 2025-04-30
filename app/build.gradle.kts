@@ -75,6 +75,9 @@ dependencies {
     implementation(libs.google.auth)
     implementation(libs.google.drive)
     implementation(libs.google.oauth)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
 
