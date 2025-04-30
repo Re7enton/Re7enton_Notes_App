@@ -43,33 +43,55 @@ class NoteRepositoryImpl @Inject constructor(
 
     /** Two-way sync using only getNotes(), addNote(), deleteNote() */
     override suspend fun syncNotes() = withContext(Dispatchers.IO) {
-        // 1) fetch remote list
-        val remote: List<NoteDto> = api.getNotes()
-
-        // 2) fetch local list
+        // 1) load both sides
+        val remote: List<NoteDto>   = api.getNotes()
         val localEntities: List<NoteEntity> = dao.getAllNotesOnce()
-        val local: List<NoteDto> = localEntities.map { it.toDto() }
+        val local:  List<NoteDto>   = localEntities.map { it.toDto() }
 
-        // 3) decide additions & deletions
-        val remoteIds = remote.map { it.id }.toSet()
-        val localIds  = local .map { it.id }.toSet()
+        // 2) index by id
+        val remoteById = remote.associateBy { it.id }
+        val localById  = local.associateBy  { it.id }
 
-        // a) Notes present locally but missing remotely → add remote
-        val toAddRemotely = local.filter { it.id !in remoteIds }
-        // b) Notes present remotely but missing locally → delete remote
-        val toDeleteRemotely = remote.filter { it.id !in localIds }
+        // 3) compute sets
+        val allIds    = (remoteById.keys + localById.keys)
+        val toAddOrUpdateRemotely = mutableListOf<NoteDto>()
+        val toDeleteRemotely     = mutableListOf<Long>()
+        val toAddOrUpdateLocally = mutableListOf<NoteDto>()
+        // no method to delete locally by id? use dao.deleteNoteById(id)
+
+        for (id in allIds) {
+            val r = remoteById[id]
+            val l = localById[id]
+
+            when {
+                r == null && l != null ->            // created locally
+                    toAddOrUpdateRemotely += l
+
+                l == null && r != null ->            // deleted locally
+                    toDeleteRemotely += id
+
+                l != null && r != null -> {          // exists both → compare timestamps
+                    if (l.updatedAt > r.updatedAt) {
+                        toAddOrUpdateRemotely += l       // local is newer → push up
+                    } else if (r.updatedAt > l.updatedAt) {
+                        toAddOrUpdateLocally += r        // remote is newer → pull down
+                    }
+                }
+            }
+        }
 
         // 4) apply remote changes
-        toAddRemotely.forEach { api.addNote(it) }
-        toDeleteRemotely.forEach { api.deleteNote(it.id) }
+        toAddOrUpdateRemotely.forEach { api.addNote(it) }
+        toDeleteRemotely.forEach     { api.deleteNote(it) }
 
-        // 5) merge “last‐modified wins” for updates:
-        //    For simplicity, treat every note present in both as “up to date” locally,
-        //    since my Drive implementation always overwrites the full JSON on each addNote().
-        //    If I need per-field updates, I could extend your API with an updateNote().
-
-        // 6) refresh local database to match remote master list
-        val finalRemote: List<NoteDto> = api.getNotes()
-        dao.clearAndInsert(finalRemote.map { it.toEntity() })
+        // 5) apply local updates
+        //    create/update locally
+        toAddOrUpdateLocally.forEach { dto ->
+            dao.insertNote(dto.toEntity())        // REPLACE strategy updates existing row
+        }
+        //    delete locally
+        toDeleteRemotely.forEach { id ->
+            dao.deleteNoteById(id)
+        }
     }
 }

@@ -102,7 +102,7 @@ class DriveNotesApiImpl @Inject constructor(
 
     /** Add one note remotely (keeps others intact) */
     override suspend fun addNote(note: NoteDto) {
-        val list = loadAll()
+        val list = loadAll().filter { it.id != note.id }.toMutableList()   // remove old version
         list.add(note)
         saveAll(list)
     }
