@@ -112,7 +112,10 @@ class AuthViewModel @Inject constructor(
                 if (result.hasResolution()) {
                     result.getPendingIntent()?.let(onPendingIntent)
                 } else {
-                    _authState.update { it.copy(driveAuthorized = true) }
+                    _authState.update { it.copy(
+                        driveAuthorized   = true,
+                        driveAccessToken  = result.accessToken    // ← capture token
+                    ) }
                 }
             }
             .addOnFailureListener {
