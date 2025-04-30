@@ -1,0 +1,10 @@
+package com.example.re7entonnotesapp.auth
+
+/**
+ * Holds all of the authentication + authorization status your UI needs.
+ */
+data class AuthState(
+    val idToken: String? = null,     // raw JWT if signed in
+    val email: String? = null,       // parsed “email” claim
+    val driveAuthorized: Boolean = false
+)

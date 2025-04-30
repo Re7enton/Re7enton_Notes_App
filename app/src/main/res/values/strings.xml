@@ -9,4 +9,8 @@
     <string name="new_note">New Note</string>
     <string name="edit_note">Edit Note</string>
     <string name="server_client_id">351818549724-unlcip4nhu2un7bfpifh67esiumlj95o.apps.googleusercontent.com</string>
+    <string name="sync">Sync</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_out">Sign out</string>
+    <string name="needs_drive_permission">Grant Drive access first</string>
 </resources>
