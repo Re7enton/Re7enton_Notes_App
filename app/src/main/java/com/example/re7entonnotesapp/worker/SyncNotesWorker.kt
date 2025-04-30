@@ -1,4 +1,4 @@
-package com.example.re7entonnotesapp.sync
+package com.example.re7entonnotesapp.worker
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker

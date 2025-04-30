@@ -2,7 +2,6 @@ package com.example.re7entonnotesapp.worker
 
 import android.content.Context
 import androidx.work.*
-import com.example.re7entonnotesapp.sync.SyncNotesWorker
 import java.util.concurrent.TimeUnit
 
 object NoteSyncScheduler {
