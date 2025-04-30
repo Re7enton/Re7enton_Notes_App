@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.gms)
 }
 
 android {
@@ -71,6 +72,9 @@ dependencies {
     implementation(libs.ksp.api)
     implementation(libs.hilt.work)
     ksp(libs.hilt.compiler)
+    implementation(libs.google.auth)
+    implementation(libs.google.drive)
+    implementation(libs.google.oauth)
 
     testImplementation(libs.junit)
 
