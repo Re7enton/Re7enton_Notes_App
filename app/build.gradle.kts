@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.gms)
+    alias(libs.plugins.gradle.versions)
+
 }
 
 android {
@@ -21,6 +23,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    packaging {
+        resources {
+            // exclude that file entirely:
+            excludes.add("META-INF/*")
+            // if you run into other duplicates you can add more patterns:
+            // excludes.add("META-INF/DEPENDENCIES")
+            // excludes.add("META-INF/LICENSE*")
+        }
     }
 
     buildTypes {
