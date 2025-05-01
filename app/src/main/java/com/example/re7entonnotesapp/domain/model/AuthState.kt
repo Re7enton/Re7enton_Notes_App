@@ -1,4 +1,4 @@
-package com.example.re7entonnotesapp.auth
+package com.example.re7entonnotesapp.domain.model
 
 /**
  * Holds all of the authentication + authorization status your UI needs.

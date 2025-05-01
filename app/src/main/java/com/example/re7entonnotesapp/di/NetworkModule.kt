@@ -1,16 +1,14 @@
 package com.example.re7entonnotesapp.di
 
 import android.content.Context
-import com.example.re7entonnotesapp.auth.AuthState
+import com.example.re7entonnotesapp.domain.model.AuthState
 import com.example.re7entonnotesapp.data.remote.DriveNotesApiImpl
 import com.example.re7entonnotesapp.data.remote.NotesApi
-import com.example.re7entonnotesapp.data.remote.NotesApiImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import io.ktor.client.HttpClient
 import javax.inject.Singleton
 
 @Module

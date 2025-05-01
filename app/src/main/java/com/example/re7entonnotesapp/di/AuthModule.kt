@@ -2,10 +2,15 @@ package com.example.re7entonnotesapp.di
 
 import android.content.Context
 import androidx.credentials.CredentialManager
-import com.example.re7entonnotesapp.auth.AuthState
+import com.example.re7entonnotesapp.domain.model.AuthState
 import com.google.android.gms.auth.api.identity.AuthorizationClient
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.Scope
+import com.google.api.services.drive.DriveScopes
 
 import dagger.Module
 import dagger.Provides
@@ -25,6 +30,20 @@ object AuthModule {
     @Provides
     @Singleton
     fun provideAuthState(): AuthState = AuthState()
+
+      @Provides @Singleton
+      fun provideGoogleSignInOptions(@ApplicationContext ctx: Context) =
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+          .requestEmail()
+          .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
+          .build()
+
+      @Provides @Singleton
+      fun provideGoogleSignInClient(
+            @ApplicationContext ctx: Context,
+        opts: GoogleSignInOptions
+      ): GoogleSignInClient =
+        GoogleSignIn.getClient(ctx, opts)
 
 
     /** AndroidX CredentialManager for federated sign-in, passkeys, passwords */
