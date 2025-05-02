@@ -7,22 +7,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.compose.*
 import com.example.re7entonnotesapp.auth.AuthViewModel
 import com.example.re7entonnotesapp.presentation.ui.AppScaffold
 import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
 import com.example.re7entonnotesapp.presentation.ui.theme.Re7entonNotesAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.navigation.compose.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.example.re7entonnotesapp.presentation.ui.NoteDetailScreen
 import com.example.re7entonnotesapp.presentation.ui.NoteListScreen
+import com.example.re7entonnotesapp.presentation.ui.NoteDetailScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,56 +29,30 @@ class MainActivity : ComponentActivity() {
     private val authVm: AuthViewModel by viewModels()
     private val notesVm: NoteViewModel by viewModels()
 
-    // Declare launcher but don't initialize it here
-    private lateinit var launcher: ActivityResultLauncher<IntentSenderRequest>
+    private val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        if (res.resultCode == RESULT_OK) {
+            authVm.handleSignInResult(res.data)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Now initialize it
-        launcher = registerForActivityResult(StartIntentSenderForResult()) { result ->
-            if (result.resultCode == RESULT_OK && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Let ViewModel parse the authorization result
-                authVm.handleDriveAuthResponse(result.data)
-            }
-        }
-
-        // Try silent sign‑in on API‑34+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            authVm.trySilentSignIn()
-        }
-
         setContent {
-            val authState by authVm.authState.collectAsState()
+            val authState by authVm.stateFlow.collectAsState()
 
             Re7entonNotesAppTheme {
                 AppScaffold(
                     accountEmail    = authState.email,
                     driveAuthorized = authState.driveAuthorized,
                     onSignIn        = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            authVm.signIn()
-                        }
+                        // launch classic GoogleSignIn flow
+                        signInLauncher.launch(authVm.getSignInIntent())
                     },
                     onSignOut       = { authVm.signOut() },
                     onSync          = {
-                        when {
-                            authState.email == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
-                                authVm.signIn()
-
-                            authState.email != null && !authState.driveAuthorized &&
-                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                                // ask VM to produce a PendingIntent, then launch it
-                                authVm.requestDriveAuth { pi ->
-                                    val req = IntentSenderRequest.Builder(pi).build()
-                                    launcher.launch(req)
-                                }
-                            }
-
-                            else ->
-                                notesVm.sync()
-                        }
+                        notesVm.sync()   // now that Drive scope was granted during sign‑in
                     }
                 ) { padding ->
                     val navController = rememberNavController()

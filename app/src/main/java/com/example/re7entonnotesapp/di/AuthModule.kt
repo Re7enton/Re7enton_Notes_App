@@ -2,6 +2,7 @@ package com.example.re7entonnotesapp.di
 
 import android.content.Context
 import androidx.credentials.CredentialManager
+import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.presentation.AuthState
 import com.google.android.gms.auth.api.identity.AuthorizationClient
 import com.google.android.gms.auth.api.identity.Identity
@@ -36,6 +37,7 @@ object AuthModule {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
           .requestEmail()
           .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
+          .requestIdToken(ctx.getString(R.string.server_client_id))
           .build()
 
       @Provides @Singleton

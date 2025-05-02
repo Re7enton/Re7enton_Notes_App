@@ -9,3 +9,12 @@ data class AuthState(
     val driveAuthorized: Boolean = false,
     val driveAccessToken: String? = null
 )
+
+//data class AuthState(
+//    val email: String? = null,
+//    val idToken: String? = null,
+//    val driveAuthorized: Boolean = false,
+//    val driveAccessToken: String? = null,
+//    val needsDrivePermission: Boolean = false,
+//    val error: String? = null
+//)
