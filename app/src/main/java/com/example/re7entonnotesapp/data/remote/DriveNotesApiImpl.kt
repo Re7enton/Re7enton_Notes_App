@@ -1,7 +1,7 @@
 package com.example.re7entonnotesapp.data.remote
 
 import android.content.Context
-import com.example.re7entonnotesapp.domain.model.AuthState
+import com.example.re7entonnotesapp.presentation.AuthState
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport

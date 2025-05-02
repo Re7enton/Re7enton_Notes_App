@@ -1,68 +1,82 @@
 package com.example.re7entonnotesapp
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import com.example.re7entonnotesapp.auth.AuthViewModel
+import com.example.re7entonnotesapp.presentation.ui.AppScaffold
+import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
 import com.example.re7entonnotesapp.presentation.ui.theme.Re7entonNotesAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.example.re7entonnotesapp.auth.AuthViewModel
-import com.example.re7entonnotesapp.presentation.navigation.NavRoutes
-import com.example.re7entonnotesapp.presentation.ui.AppScaffold
 import com.example.re7entonnotesapp.presentation.ui.NoteDetailScreen
 import com.example.re7entonnotesapp.presentation.ui.NoteListScreen
-import com.example.re7entonnotesapp.presentation.viewmodel.NoteViewModel
-import kotlinx.coroutines.flow.map
-import androidx.activity.result.IntentSenderRequest
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // launcher for any PendingIntent (sign-in or Drive consent)
-    private val launcher =
-        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            // no-op: your AuthViewModel already observes credential state via suspend calls
-        }
+    private val authVm: AuthViewModel by viewModels()
+    private val notesVm: NoteViewModel by viewModels()
+
+    // Declare launcher but don't initialize it here
+    private lateinit var launcher: ActivityResultLauncher<IntentSenderRequest>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Now initialize it
+        launcher = registerForActivityResult(StartIntentSenderForResult()) { result ->
+            if (result.resultCode == RESULT_OK && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                // Let ViewModel parse the authorization result
+                authVm.handleDriveAuthResponse(result.data)
+            }
+        }
+
+        // Try silent sign‑in on API‑34+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            authVm.trySilentSignIn()
+        }
+
         setContent {
-            val authVm: AuthViewModel = hiltViewModel()
-            val notesVm: NoteViewModel = hiltViewModel()
-
             val authState by authVm.authState.collectAsState()
-
-            // attempt silent sign-in on launch
-            LaunchedEffect(Unit) { authVm.trySilentSignIn() }
 
             Re7entonNotesAppTheme {
                 AppScaffold(
-                    accountEmail     = authState.email,
-                    driveAuthorized  = authState.driveAuthorized,
-                    onSignIn         = { authVm.beginInteractiveSignIn { pi -> launcher.launch(IntentSenderRequest.Builder(pi).build()) } },
-                    onSignOut        = { authVm.signOut() },
-                    onSync           = {
+                    accountEmail    = authState.email,
+                    driveAuthorized = authState.driveAuthorized,
+                    onSignIn        = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            authVm.signIn()
+                        }
+                    },
+                    onSignOut       = { authVm.signOut() },
+                    onSync          = {
                         when {
-                            authState.email == null ->
-                                authVm.beginInteractiveSignIn { pi -> launcher.launch(IntentSenderRequest.Builder(pi).build()) }
-                            !authState.driveAuthorized ->
-                                authVm.requestDriveAuth { pi -> launcher.launch(IntentSenderRequest.Builder(pi).build()) }
+                            authState.email == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                                authVm.signIn()
+
+                            authState.email != null && !authState.driveAuthorized &&
+                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                                // ask VM to produce a PendingIntent, then launch it
+                                authVm.requestDriveAuth { pi ->
+                                    val req = IntentSenderRequest.Builder(pi).build()
+                                    launcher.launch(req)
+                                }
+                            }
+
                             else ->
                                 notesVm.sync()
                         }
@@ -71,36 +85,34 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(
                         navController = navController,
-                        startDestination = NavRoutes.NOTE_LIST,
+                        startDestination = "note_list",
                         modifier = padding
                     ) {
-                        // List Screen
-                        composable(
-                            NavRoutes.NOTE_LIST) {
+                        composable("note_list") {
                             NoteListScreen(
                                 notes = notesVm.notes,
-                                onAddNote = { navController.navigate(NavRoutes.noteDetailRoute(0L)) },
-                                onEditNote = { navController.navigate(NavRoutes.noteDetailRoute(it)) }
+                                onAddNote = { navController.navigate("note_detail/0") },
+                                onEditNote = { navController.navigate("note_detail/$it") }
                             )
                         }
-                        // Detail Screen with noteId arg
                         composable(
-                            route = "${NavRoutes.NOTE_DETAIL}/{${NavRoutes.ARG_NOTE_ID}}",
-                            arguments = listOf(navArgument(NavRoutes.ARG_NOTE_ID) {
-                                type = NavType.LongType } )
-                        ) { backStackEntry ->
-                            val id = backStackEntry.arguments?.getLong(NavRoutes.ARG_NOTE_ID) ?: 0L
+                            "note_detail/{noteId}",
+                            arguments = listOf(navArgument("noteId") { type = NavType.LongType })
+                        ) { backStack ->
+                            val id = backStack.arguments?.getLong("noteId") ?: 0L
                             NoteDetailScreen(
                                 noteId = id,
                                 notesFlow = notesVm.notes,
-                                onSave = { title, content ->
-                                    notesVm.saveNote(title, content, id)
+                                onSave = { t, c ->
+                                    notesVm.saveNote(t, c, id)
                                     navController.popBackStack()
                                 },
                                 onDelete = {
                                     if (id != 0L) notesVm.removeNote(id)
-                                    navController.popBackStack() },
-                                onCancel  = { navController.popBackStack() } )
+                                    navController.popBackStack()
+                                },
+                                onCancel = { navController.popBackStack() }
+                            )
                         }
                     }
                 }

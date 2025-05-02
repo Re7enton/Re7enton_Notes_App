@@ -1,7 +1,7 @@
 package com.example.re7entonnotesapp.di
 
 import android.content.Context
-import com.example.re7entonnotesapp.domain.model.AuthState
+import com.example.re7entonnotesapp.presentation.AuthState
 import com.example.re7entonnotesapp.data.remote.DriveNotesApiImpl
 import com.example.re7entonnotesapp.data.remote.NotesApi
 import dagger.Module
