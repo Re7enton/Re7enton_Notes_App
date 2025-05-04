@@ -18,8 +18,6 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideNotesApi(
-        @ApplicationContext ctx: Context,
         authState: AuthState
-    ): NotesApi = DriveNotesApiImpl(ctx, authState)
-
+    ): NotesApi = DriveNotesApiImpl(authState)
 }

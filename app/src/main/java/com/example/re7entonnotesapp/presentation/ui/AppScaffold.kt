@@ -3,16 +3,10 @@ package com.example.re7entonnotesapp.presentation.ui
 import android.os.Build
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,6 +21,7 @@ fun AppScaffold(
     onSync: () -> Unit,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     content: @Composable (Modifier) -> Unit
 ) {
     Scaffold(
@@ -34,12 +29,8 @@ fun AppScaffold(
             TopAppBar(
                 title = { Text(text = stringResource(R.string.my_notes)) },
                 actions = {
-                    // only show Sync on API 34+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        IconButton(
-                            onClick = onSync,
-                            enabled = driveAuthorized
-                        ) {
+                        IconButton(onClick = onSync, enabled = driveAuthorized) {
                             Icon(
                                 imageVector = Icons.Filled.Refresh,
                                 contentDescription = stringResource(R.string.sync)
@@ -54,7 +45,6 @@ fun AppScaffold(
                             )
                         }
                     }
-                    // account / sign-in
                     if (accountEmail != null) {
                         Text(
                             text = accountEmail,
@@ -78,7 +68,8 @@ fun AppScaffold(
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }  // wire it here
     ) { innerPadding ->
         content(Modifier.padding(innerPadding))
     }
