@@ -53,11 +53,21 @@ class AuthViewModel @Inject constructor(
     val errorState: StateFlow<String?> = _error
 
     init {
-        // restore persisted Drive‑authorized
+        // 1) restore persisted idToken → update AuthState.idToken & .email
+        viewModelScope.launch {
+            authPrefs.idTokenFlow.collect { token ->
+                if (token != null) {
+                    val email = parseEmail(token)
+                    Log.d(TAG,"restored idToken; email=$email")
+                    authStateFlow.update { it.copy(idToken=token, email=email) }
+                }
+            }
+        }
+        // 2) restore persisted Drive‑authorized flag
         viewModelScope.launch {
             authPrefs.driveAuthorizedFlow.collect { granted ->
                 if (granted) {
-                    // update in-memory state
+                    Log.d(TAG,"restored driveAuthorized=true")
                     authStateFlow.update { it.copy(driveAuthorized = true) }
                 }
             }
@@ -131,17 +141,18 @@ class AuthViewModel @Inject constructor(
     /** Common handler for both silent & interactive flows. */
     private fun handleCredential(cred: androidx.credentials.Credential) {
         when {
-            // direct ID‐token
             cred is GoogleIdTokenCredential -> {
                 val t = cred.idToken
+                // persist it
+                viewModelScope.launch { authPrefs.setIdToken(t) }
                 updateAuth { copy(idToken=t, email=parseEmail(t)) }
             }
-            // wrapped in CustomCredential
             cred is CustomCredential
                     && cred.type==GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
                 try {
                     val idCred = GoogleIdTokenCredential.createFrom(cred.data)
                     val t = idCred.idToken
+                    viewModelScope.launch { authPrefs.setIdToken(t) }
                     updateAuth { copy(idToken=t, email=parseEmail(t)) }
                 } catch(ex:Exception) {
                     Log.e(TAG,"invalid ID token",ex)
@@ -167,7 +178,6 @@ class AuthViewModel @Inject constructor(
                 if(res.hasResolution()) onPendingIntent(res.getPendingIntent()!!)
                 else {
                     updateAuth { copy(driveAuthorized=true, driveAccessToken=res.accessToken) }
-                    // persist flag
                     viewModelScope.launch { authPrefs.setDriveAuthorized(true) }
                 }
             }
@@ -195,10 +205,10 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    /** Sign‑out resets everything + clears persisted flag. */
+    /** Sign‑out resets everything + clears persisted flags. */
     fun signOut() {
         Log.d(TAG,"signOut()")
         updateAuth { AuthState() }
-        viewModelScope.launch { authPrefs.setDriveAuthorized(false) }
+        viewModelScope.launch { authPrefs.clearAll() }
     }
 }

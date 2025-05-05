@@ -32,9 +32,11 @@ class NoteViewModel @Inject constructor(
             )
 
     /** Called by UI to add or update a note */
-    fun saveNote(title: String, content: String, id: Long = 0L) {
-        val now = System.currentTimeMillis()
-        val note = Note(id = id, title = title, content = content, updatedAt = now)
+        fun saveNote(title: String, content: String, id: Long = 0L) {
+                // If this is a new note (id==0), assign a timestamp as its stable ID
+                val noteId = if (id == 0L) System.currentTimeMillis() else id
+                val now = System.currentTimeMillis()
+                val note = Note(id = noteId, title = title, content = content, updatedAt = now)
         viewModelScope.launch {
             addNote(note)
         }

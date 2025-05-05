@@ -14,6 +14,8 @@ object NoteSyncScheduler {
 
         val request = PeriodicWorkRequestBuilder<SyncNotesWorker>(15, TimeUnit.MINUTES)
             .setConstraints(constraints)
+                    // ⏱ defer first run by 15 minutes (otherwise it fires immediately)
+                    .setInitialDelay(15, TimeUnit.MINUTES)
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
                 1, TimeUnit.MINUTES
