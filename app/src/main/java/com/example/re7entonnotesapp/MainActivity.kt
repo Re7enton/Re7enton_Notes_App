@@ -41,13 +41,12 @@ class MainActivity : ComponentActivity() {
     private val authVm: AuthViewModel by viewModels()
     private val notesVm: NoteViewModel by viewModels()
 
-    private lateinit var driveLauncher: ActivityResultLauncher<IntentSenderRequest>
+    private lateinit var driveLauncher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Launcher for Drive‑consent PendingIntent
         driveLauncher = registerForActivityResult(StartIntentSenderForResult()) { res ->
             Log.d(TAG, "Drive launcher result: $res")
             if (res.resultCode == RESULT_OK && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -61,23 +60,15 @@ class MainActivity : ComponentActivity() {
             val snackbarHost = remember { SnackbarHostState() }
             val scope = rememberCoroutineScope()
 
-            // Show any auth errors
+            // show errors
             LaunchedEffect(errorMsg) {
                 errorMsg?.let {
                     Log.e(TAG, "Showing error: $it")
-                    snackbarHost.showSnackbar(it)
+                    scope.launch { snackbarHost.showSnackbar(it) }
                 }
             }
 
-            // If we restored no ID‑token, try silent sign‑in once
-            LaunchedEffect(authState.idToken) {
-                if (authState.idToken == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    Log.d(TAG, "No ID‑token restored; attempting silent sign‑in")
-                    authVm.trySilentSignIn()
-                }
-            }
-
-            // When Drive consent granted, perform initial sync
+            // when DriveConsent granted, do initial sync
             LaunchedEffect(authState.driveAuthorized) {
                 if (authState.driveAuthorized) {
                     Log.d(TAG, "Drive authorized—performing initial sync")
@@ -90,7 +81,7 @@ class MainActivity : ComponentActivity() {
                     accountEmail    = authState.email,
                     driveAuthorized = authState.driveAuthorized,
                     onSignIn        = {
-                        Log.d(TAG, "Sign‑in button clicked")
+                        Log.d(TAG, "Sign‑in clicked")
                         if (!isOnline()) {
                             scope.launch { snackbarHost.showSnackbar(getString(R.string.offline_notice)) }
                         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -98,17 +89,16 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onSignOut       = {
-                        Log.d(TAG, "Sign‑out button clicked")
+                        Log.d(TAG, "Sign‑out clicked")
                         authVm.signOut()
                     },
                     onSync          = {
-                        Log.d(TAG, "Sync button clicked: authState=$authState")
+                        Log.d(TAG, "Sync clicked: $authState")
                         if (!isOnline()) {
                             scope.launch { snackbarHost.showSnackbar(getString(R.string.offline_notice)) }
                         } else when {
                             authState.email == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
                                 authVm.signIn()
-
                             authState.email != null && !authState.driveAuthorized &&
                                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
                                 authVm.requestDriveAuth { pi ->
@@ -116,7 +106,6 @@ class MainActivity : ComponentActivity() {
                                     driveLauncher.launch(IntentSenderRequest.Builder(pi).build())
                                 }
                             }
-
                             else ->
                                 notesVm.sync()
                         }
@@ -131,29 +120,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("note_list") {
                             NoteListScreen(
-                                notes      = notesVm.notes,
-                                // use -1L to mean “new”
-                                onAddNote  = { navController.navigate("note_detail/-1") },
-                                onEditNote = { navController.navigate("note_detail/$it") }
+                                notes     = notesVm.notes,
+                                onAddNote = { navController.navigate("note_detail/0") },
+                                onEditNote= { navController.navigate("note_detail/$it") }
                             )
                         }
                         composable(
                             "note_detail/{noteId}",
                             arguments = listOf(navArgument("noteId") { type = NavType.LongType })
                         ) { backStack ->
-                            val rawId = backStack.arguments?.getLong("noteId") ?: -1L
-                            // treat negative as new
-                            val id = if (rawId < 0L) -1L else rawId
+                            val id = backStack.arguments?.getLong("noteId") ?: 0L
                             NoteDetailScreen(
                                 noteId    = id,
                                 notesFlow = notesVm.notes,
                                 onSave    = { t, c ->
-                                    // for new use id=0 so Room will auto‑generate
-                                    notesVm.saveNote(t, c, if (id < 0L) 0L else id)
+                                    notesVm.saveNote(t, c, id)
                                     navController.popBackStack()
                                 },
                                 onDelete  = {
-                                    if (id >= 0L) notesVm.removeNote(id)
+                                    if (id != 0L) notesVm.removeNote(id)
                                     navController.popBackStack()
                                 },
                                 onCancel  = { navController.popBackStack() }
@@ -165,10 +150,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Safely check for Internet connectivity */
+    /** network‑check helper */
     private fun isOnline(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return false
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }

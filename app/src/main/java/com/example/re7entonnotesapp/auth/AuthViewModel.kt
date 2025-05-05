@@ -3,6 +3,7 @@ package com.example.re7entonnotesapp.auth
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -32,6 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.re7entonnotesapp.R
 import com.example.re7entonnotesapp.presentation.AuthState
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -53,13 +55,13 @@ class AuthViewModel @Inject constructor(
     val errorState: StateFlow<String?> = _error
 
     init {
-        // 1) restore persisted ID‑token
+        // 1) restore persisted ID‑token → update AuthState
         viewModelScope.launch {
             authPrefs.idTokenFlow.collect { token ->
-                if (token != null) {
-                    val email = parseEmail(token)
+                token?.let {
+                    val email = parseEmail(it)
                     Log.d(TAG, "restored idToken; email=$email")
-                    authStateFlow.update { it.copy(idToken = token, email = email) }
+                    authStateFlow.update { st -> st.copy(idToken = it, email = email) }
                 }
             }
         }
@@ -68,8 +70,24 @@ class AuthViewModel @Inject constructor(
             authPrefs.driveAuthorizedFlow.collect { granted ->
                 if (granted) {
                     Log.d(TAG, "restored driveAuthorized=true")
-                    authStateFlow.update { it.copy(driveAuthorized = true) }
+                    authStateFlow.update { st -> st.copy(driveAuthorized = true) }
                 }
+            }
+        }
+        // 3) restore persisted Drive access‑token
+        viewModelScope.launch {
+            authPrefs.driveAccessTokenFlow.collect { token ->
+                token?.let {
+                    Log.d(TAG, "restored driveAccessToken")
+                    authStateFlow.update { st -> st.copy(driveAccessToken = it) }
+                }
+            }
+        }
+        // 4) once we've loaded any saved ID‑token, attempt silent sign‑in only if none
+        viewModelScope.launch {
+            val existing = authPrefs.idTokenFlow.first()
+            if (existing == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                trySilentSignIn()
             }
         }
     }
@@ -82,12 +100,12 @@ class AuthViewModel @Inject constructor(
             ?.let { String(Base64.decode(it, Base64.URL_SAFE)) }
             ?.let { org.json.JSONObject(it).optString("email").takeIf { e -> e.isNotEmpty() } }
 
-    /** Update the shared AuthState flow */
+    /** Common helper to update AuthState */
     private fun updateAuth(transform: AuthState.() -> AuthState) {
         authStateFlow.update(transform)
     }
 
-    /** Silent one‑tap sign‑in (no UI) on API‑34+ */
+    /** Silent one‑tap sign‑in (no UI) on API‑34+. */
     @RequiresApi(34)
     fun trySilentSignIn() {
         Log.d(TAG, "trySilentSignIn()")
@@ -95,9 +113,7 @@ class AuthViewModel @Inject constructor(
             .setServerClientId(context.getString(R.string.server_client_id))
             .setFilterByAuthorizedAccounts(true)
             .build()
-        val req = GetCredentialRequest.Builder()
-            .addCredentialOption(option)
-            .build()
+        val req = GetCredentialRequest.Builder().addCredentialOption(option).build()
 
         credentialManager.getCredentialAsync(
             context, req, null,
@@ -111,16 +127,14 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    /** Interactive “Sign In with Google” (shows UI) */
+    /** Interactive “Sign In with Google” (shows UI). */
     @RequiresApi(34)
     fun signIn() {
         Log.d(TAG, "signIn()")
         val option = GetSignInWithGoogleOption.Builder(
             context.getString(R.string.server_client_id)
         ).build()
-        val req = GetCredentialRequest.Builder()
-            .addCredentialOption(option)
-            .build()
+        val req = GetCredentialRequest.Builder().addCredentialOption(option).build()
 
         credentialManager.getCredentialAsync(
             context, req, null,
@@ -138,16 +152,14 @@ class AuthViewModel @Inject constructor(
         )
     }
 
-    /** Handle whatever Credential comes back */
+    /** Handle whatever Credential comes back (silent or interactive). */
     private fun handleCredential(cred: androidx.credentials.Credential) {
         when {
-            // direct GoogleIdTokenCredential
             cred is GoogleIdTokenCredential -> {
                 val t = cred.idToken
                 viewModelScope.launch { authPrefs.setIdToken(t) }
                 updateAuth { copy(idToken = t, email = parseEmail(t)) }
             }
-            // wrapped in CustomCredential
             cred is CustomCredential
                     && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
                 try {
@@ -167,7 +179,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    /** Request Drive appDataFolder consent (shows UI) */
+    /** Request Drive appDataFolder consent (shows UI). */
     @RequiresApi(34)
     fun requestDriveAuth(onPendingIntent: (PendingIntent) -> Unit) {
         Log.d(TAG, "requestDriveAuth()")
@@ -176,10 +188,16 @@ class AuthViewModel @Inject constructor(
             .build()
         authorizationClient.authorize(req)
             .addOnSuccessListener { res: AuthorizationResult ->
-                if (res.hasResolution()) onPendingIntent(res.getPendingIntent()!!)
-                else {
-                    updateAuth { copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
-                    viewModelScope.launch { authPrefs.setDriveAuthorized(true) }
+                if (res.hasResolution()) {
+                    onPendingIntent(res.getPendingIntent()!!)
+                } else {
+                    // consent granted immediately → capture & persist
+                    val at = res.accessToken!!
+                    updateAuth { copy(driveAuthorized = true, driveAccessToken = at) }
+                    viewModelScope.launch {
+                        authPrefs.setDriveAuthorized(true)
+                        authPrefs.setDriveAccessToken(at)
+                    }
                 }
             }
             .addOnFailureListener { e ->
@@ -188,7 +206,7 @@ class AuthViewModel @Inject constructor(
             }
     }
 
-    /** Handle Drive consent result Intent */
+    /** Handle Drive consent result Intent. */
     @RequiresApi(34)
     fun handleDriveAuthResponse(data: Intent?) {
         Log.d(TAG, "handleDriveAuthResponse")
@@ -198,15 +216,19 @@ class AuthViewModel @Inject constructor(
         }
         val res = authorizationClient.getAuthorizationResultFromIntent(data)
         if (!res.hasResolution()) {
-            updateAuth { copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
-            viewModelScope.launch { authPrefs.setDriveAuthorized(true) }
+            val at = res.accessToken!!
+            updateAuth { copy(driveAuthorized = true, driveAccessToken = at) }
+            viewModelScope.launch {
+                authPrefs.setDriveAuthorized(true)
+                authPrefs.setDriveAccessToken(at)
+            }
         } else {
             Log.e(TAG, "Drive consent still needs resolution")
             _error.value = context.getString(R.string.drive_consent_incomplete)
         }
     }
 
-    /** Sign‑out resets everything + clears persisted flags */
+    /** Sign‑out resets everything and clears persisted prefs. */
     fun signOut() {
         Log.d(TAG, "signOut()")
         updateAuth { AuthState() }

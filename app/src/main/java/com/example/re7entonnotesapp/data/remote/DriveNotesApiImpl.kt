@@ -19,7 +19,7 @@ import java.io.ByteArrayOutputStream
 
 private const val TAG = "DriveNotesApiImpl"
 
-class DriveNotesApiImpl @Inject constructor(
+class DriveNotesApiImpl(
     private val authStateFlow: StateFlow<AuthState>
 ) : NotesApi {
 
@@ -30,6 +30,7 @@ class DriveNotesApiImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Build Drive client only when token available */
     private fun driveService(): Drive? {
         val token = authStateFlow.value.driveAccessToken
         if (token.isNullOrEmpty()) {
@@ -37,8 +38,10 @@ class DriveNotesApiImpl @Inject constructor(
             return null
         }
         val transport = GoogleNetHttpTransport.newTrustedTransport()
-        val init = HttpRequestInitializer { req -> req.headers.authorization = "Bearer $token" }
-        return Drive.Builder(transport, GsonFactory(), init)
+        val initializer = HttpRequestInitializer { req ->
+            req.headers.authorization = "Bearer $token"
+        }
+        return Drive.Builder(transport, GsonFactory(), initializer)
             .setApplicationName("Re7entonNotesApp")
             .build()
     }
@@ -49,8 +52,9 @@ class DriveNotesApiImpl @Inject constructor(
             .setSpaces("appDataFolder")
             .setFields("files(id,name)")
             .execute()
-        val file = list.files.firstOrNull { it.name == FILENAME } ?: return@withContext mutableListOf()
-        val out = ByteArrayOutputStream()
+        val file: File? = list.files.firstOrNull { it.name == FILENAME }
+        if (file == null) return@withContext mutableListOf()
+        val out = java.io.ByteArrayOutputStream()
         drive.files().get(file.id).executeMediaAndDownloadTo(out)
         val text = out.toString("UTF-8")
         json.decodeFromString(ListSerializer(NoteDto.serializer()), text).toMutableList()
@@ -64,13 +68,11 @@ class DriveNotesApiImpl @Inject constructor(
         val bytes = json.encodeToString(ListSerializer(NoteDto.serializer()), all)
             .toByteArray(Charsets.UTF_8)
         val content = ByteArrayContent(MIME_JSON, bytes)
-
         val list = drive.files().list()
             .setSpaces("appDataFolder")
             .setFields("files(id,name)")
             .execute()
         val existing = list.files.firstOrNull { it.name == FILENAME }
-
         if (existing != null) {
             drive.files().update(existing.id, File().setName(FILENAME), content).execute()
             Log.d(TAG, "saveAll: Updated notes.json on Drive (${all.size} items)")
@@ -83,18 +85,16 @@ class DriveNotesApiImpl @Inject constructor(
     override suspend fun getNotes(): List<NoteDto> = loadAll()
 
     override suspend fun addNote(note: NoteDto) {
-        // remove any old version of this id, then add new
-        val current = loadAll()
-        val filtered = current.filter { it.id != note.id }.toMutableList()
-        filtered.add(note)
-        Log.d(TAG, "addNote: writing ${filtered.size} notes after filtering id=${note.id}")
-        saveAll(filtered)
+        // replace any same‑id then add
+        val current = loadAll().filter { it.id != note.id }.toMutableList()
+        current.add(note)
+        Log.d(TAG, "addNote: writing ${current.size} notes after filtering id=${note.id}")
+        saveAll(current)
     }
 
     override suspend fun deleteNote(id: Long) {
-        val current = loadAll()
-        val filtered = current.filter { it.id != id }
-        Log.d(TAG, "deleteNote: writing ${filtered.size} notes after removing id=$id")
-        saveAll(filtered)
+        val current = loadAll().filter { it.id != id }
+        Log.d(TAG, "deleteNote: writing ${current.size} notes after removing id=$id")
+        saveAll(current)
     }
 }
