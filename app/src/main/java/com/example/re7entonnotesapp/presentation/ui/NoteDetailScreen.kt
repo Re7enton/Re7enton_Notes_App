@@ -29,44 +29,41 @@ fun NoteDetailScreen(
     val notes by notesFlow.collectAsState()
     val existing = remember(notes) { notes.find { it.id == noteId } }
 
-    // reset whenever `existing` changes
-    var title by rememberSaveable(existing?.id) { mutableStateOf("") }
-    var content by rememberSaveable(existing?.id) { mutableStateOf("") }
+    // use noteId as key, not existing?.id
+    var title by rememberSaveable(noteId) { mutableStateOf("") }
+    var content by rememberSaveable(noteId) { mutableStateOf("") }
 
     LaunchedEffect(existing) {
-        existing?.let {
-            title = it.title
-            content = it.content
+        if (existing != null) {
+            title = existing.title
+            content = existing.content
+        } else {
+            // new‑note: clear fields
+            title = ""
+            content = ""
         }
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding(),
+        modifier = Modifier.fillMaxSize().imePadding(),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (noteId == 0L)
-                            stringResource(R.string.new_note)
-                        else
-                            stringResource(R.string.edit_note),
+                        if (noteId == 0L) stringResource(R.string.new_note)
+                        else stringResource(R.string.edit_note),
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onCancel) {
-                        Icon(Icons.Filled.Close, contentDescription = "Cancel")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cancel))
                     }
                 },
                 actions = {
                     if (noteId != 0L) {
                         IconButton(onClick = onDelete) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = stringResource(R.string.delete)
-                            )
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
                         }
                     }
                 }
@@ -74,36 +71,33 @@ fun NoteDetailScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onSave(title, content) }) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.save_note)
-                )
+                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.save_note))
             }
         }
-    ) { paddingValues ->
-            Column(
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text(stringResource(R.string.note_title)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text(stringResource(R.string.note_content)) },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.note_title)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text(stringResource(R.string.note_content)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
-            }
+                    .fillMaxWidth()
+                    .height(200.dp)
+            )
         }
+    }
 }
 
 @Preview(showBackground = true)

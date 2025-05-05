@@ -9,7 +9,7 @@ import java.time.Instant
 @Serializable
 data class NoteEntity(
         // We assign our own IDs (timestamps), so autoGenerate must be false
-        @PrimaryKey
+    @PrimaryKey
     val id: Long,
     val title: String,
     val content: String,

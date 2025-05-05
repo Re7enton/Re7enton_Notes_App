@@ -15,11 +15,11 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
+import java.io.ByteArrayOutputStream
 
 private const val TAG = "DriveNotesApiImpl"
 
 class DriveNotesApiImpl @Inject constructor(
-    /** Read‑only view of the shared AuthState flow */
     private val authStateFlow: StateFlow<AuthState>
 ) : NotesApi {
 
@@ -30,7 +30,6 @@ class DriveNotesApiImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Build Drive client only when token is available */
     private fun driveService(): Drive? {
         val token = authStateFlow.value.driveAccessToken
         if (token.isNullOrEmpty()) {
@@ -38,10 +37,8 @@ class DriveNotesApiImpl @Inject constructor(
             return null
         }
         val transport = GoogleNetHttpTransport.newTrustedTransport()
-        val initializer = HttpRequestInitializer { req ->
-            req.headers.authorization = "Bearer $token"
-        }
-        return Drive.Builder(transport, GsonFactory(), initializer)
+        val init = HttpRequestInitializer { req -> req.headers.authorization = "Bearer $token" }
+        return Drive.Builder(transport, GsonFactory(), init)
             .setApplicationName("Re7entonNotesApp")
             .build()
     }
@@ -52,9 +49,8 @@ class DriveNotesApiImpl @Inject constructor(
             .setSpaces("appDataFolder")
             .setFields("files(id,name)")
             .execute()
-        val file: File? = list.files.firstOrNull { it.name == FILENAME }
-        if (file == null) return@withContext mutableListOf()
-        val out = java.io.ByteArrayOutputStream()
+        val file = list.files.firstOrNull { it.name == FILENAME } ?: return@withContext mutableListOf()
+        val out = ByteArrayOutputStream()
         drive.files().get(file.id).executeMediaAndDownloadTo(out)
         val text = out.toString("UTF-8")
         json.decodeFromString(ListSerializer(NoteDto.serializer()), text).toMutableList()
@@ -68,32 +64,37 @@ class DriveNotesApiImpl @Inject constructor(
         val bytes = json.encodeToString(ListSerializer(NoteDto.serializer()), all)
             .toByteArray(Charsets.UTF_8)
         val content = ByteArrayContent(MIME_JSON, bytes)
+
         val list = drive.files().list()
             .setSpaces("appDataFolder")
             .setFields("files(id,name)")
             .execute()
         val existing = list.files.firstOrNull { it.name == FILENAME }
+
         if (existing != null) {
             drive.files().update(existing.id, File().setName(FILENAME), content).execute()
-            Log.d(TAG, "Updated notes.json on Drive")
+            Log.d(TAG, "saveAll: Updated notes.json on Drive (${all.size} items)")
         } else {
-            val meta = File().setName(FILENAME).setParents(listOf("appDataFolder"))
-            drive.files().create(meta, content).execute()
-            Log.d(TAG, "Created notes.json on Drive")
+            drive.files().create(File().setName(FILENAME).setParents(listOf("appDataFolder")), content).execute()
+            Log.d(TAG, "saveAll: Created notes.json on Drive (${all.size} items)")
         }
     }
 
     override suspend fun getNotes(): List<NoteDto> = loadAll()
 
     override suspend fun addNote(note: NoteDto) {
-        val list = loadAll()
-        list.add(note)
-        saveAll(list)
+        // remove any old version of this id, then add new
+        val current = loadAll()
+        val filtered = current.filter { it.id != note.id }.toMutableList()
+        filtered.add(note)
+        Log.d(TAG, "addNote: writing ${filtered.size} notes after filtering id=${note.id}")
+        saveAll(filtered)
     }
 
     override suspend fun deleteNote(id: Long) {
-        val list = loadAll()
-        list.removeAll { it.id == id }
-        saveAll(list)
+        val current = loadAll()
+        val filtered = current.filter { it.id != id }
+        Log.d(TAG, "deleteNote: writing ${filtered.size} notes after removing id=$id")
+        saveAll(filtered)
     }
 }
