@@ -27,10 +27,11 @@ fun AppScaffold(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(R.string.my_notes)) },
+                title = { Text(stringResource(R.string.my_notes)) },
                 actions = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        IconButton(onClick = onSync, enabled = driveAuthorized) {
+                        // Always enabled so user can tap to trigger Drive consent or sign‑in
+                        IconButton(onClick = onSync) {
                             Icon(
                                 imageVector = Icons.Filled.Refresh,
                                 contentDescription = stringResource(R.string.sync)
@@ -69,7 +70,7 @@ fun AppScaffold(
                 colors = TopAppBarDefaults.topAppBarColors()
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }  // wire it here
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         content(Modifier.padding(innerPadding))
     }

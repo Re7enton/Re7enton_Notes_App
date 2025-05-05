@@ -11,14 +11,16 @@ import com.google.api.services.drive.model.File
 import com.google.api.services.drive.model.FileList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import javax.inject.Inject
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import kotlinx.coroutines.flow.StateFlow
 
 private const val TAG = "DriveNotesApiImpl"
+
 class DriveNotesApiImpl @Inject constructor(
-    private val authState: AuthState
+    /** Read‑only view of the shared AuthState flow */
+    private val authStateFlow: StateFlow<AuthState>
 ) : NotesApi {
 
     companion object {
@@ -28,9 +30,10 @@ class DriveNotesApiImpl @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Build Drive client only when token is available */
     private fun driveService(): Drive? {
-        val token = authState.driveAccessToken
-        if (token == null) {
+        val token = authStateFlow.value.driveAccessToken
+        if (token.isNullOrEmpty()) {
             Log.e(TAG, "driveService: no driveAccessToken; user not authorized")
             return null
         }
@@ -51,7 +54,7 @@ class DriveNotesApiImpl @Inject constructor(
             .execute()
         val file: File? = list.files.firstOrNull { it.name == FILENAME }
         if (file == null) return@withContext mutableListOf()
-        val out = ByteArrayOutputStream()
+        val out = java.io.ByteArrayOutputStream()
         drive.files().get(file.id).executeMediaAndDownloadTo(out)
         val text = out.toString("UTF-8")
         json.decodeFromString(ListSerializer(NoteDto.serializer()), text).toMutableList()
@@ -59,7 +62,7 @@ class DriveNotesApiImpl @Inject constructor(
 
     private suspend fun saveAll(all: List<NoteDto>) = withContext(Dispatchers.IO) {
         val drive = driveService() ?: run {
-            Log.e(TAG, "saveAll: Drive service unavailable, skipping save")
+            Log.e(TAG, "saveAll: Drive unavailable, skipping")
             return@withContext
         }
         val bytes = json.encodeToString(ListSerializer(NoteDto.serializer()), all)

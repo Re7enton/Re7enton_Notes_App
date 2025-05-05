@@ -14,4 +14,13 @@
     <string name="sign_out">Sign out</string>
     <string name="needs_drive_permission">Grant Drive access first</string>
     <string name="my_notes">My Notes</string>
+    <!-- Sign‑in / credential errors -->
+    <string name="sign_in_failed">Sign‑in cancelled or failed</string>
+    <string name="invalid_token">Invalid ID‑token format</string>
+    <string name="unsupported_credential">Unsupported credential type</string>
+
+    <!-- Drive authorization errors -->
+    <string name="drive_auth_failed">Drive authorization failed</string>
+    <string name="no_drive_data">No data from Drive consent</string>
+    <string name="drive_consent_incomplete">Drive consent incomplete</string>
 </resources>

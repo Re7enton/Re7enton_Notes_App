@@ -60,11 +60,19 @@ class MainActivity : ComponentActivity() {
             val errorMsg by authVm.errorState.collectAsState()
             val snackbarHost = remember { SnackbarHostState() }
 
-            // Show error in snackbar
+            // Show any auth errors in a Snackbar
             LaunchedEffect(errorMsg) {
                 errorMsg?.let {
                     Log.e(TAG, "Showing error: $it")
                     snackbarHost.showSnackbar(it)
+                }
+            }
+
+            // ▶️ When driveAuthorized flips true, immediately pull remote notes into Room
+            LaunchedEffect(authState.driveAuthorized) {
+                if (authState.driveAuthorized) {
+                    Log.d(TAG, "Drive authorized—performing initial sync")
+                    notesVm.sync()
                 }
             }
 
@@ -85,9 +93,11 @@ class MainActivity : ComponentActivity() {
                     onSync          = {
                         Log.d(TAG, "Sync button clicked: authState=$authState")
                         when {
+                            // not yet signed in
                             authState.email == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
                                 authVm.signIn()
 
+                            // signed in but no Drive consent
                             authState.email != null && !authState.driveAuthorized &&
                                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
                                 authVm.requestDriveAuth { pi ->
@@ -96,6 +106,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // already authorized → sync now
                             else ->
                                 notesVm.sync()
                         }
@@ -110,9 +121,9 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("note_list") {
                             NoteListScreen(
-                                notes = notesVm.notes,
+                                notes     = notesVm.notes,
                                 onAddNote = { navController.navigate("note_detail/0") },
-                                onEditNote = { navController.navigate("note_detail/$it") }
+                                onEditNote= { navController.navigate("note_detail/$it") }
                             )
                         }
                         composable(
@@ -121,17 +132,17 @@ class MainActivity : ComponentActivity() {
                         ) { backStack ->
                             val id = backStack.arguments?.getLong("noteId") ?: 0L
                             NoteDetailScreen(
-                                noteId = id,
+                                noteId    = id,
                                 notesFlow = notesVm.notes,
-                                onSave = { t, c ->
+                                onSave    = { t, c ->
                                     notesVm.saveNote(t, c, id)
                                     navController.popBackStack()
                                 },
-                                onDelete = {
+                                onDelete  = {
                                     if (id != 0L) notesVm.removeNote(id)
                                     navController.popBackStack()
                                 },
-                                onCancel = { navController.popBackStack() }
+                                onCancel  = { navController.popBackStack() }
                             )
                         }
                     }

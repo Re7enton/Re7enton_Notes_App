@@ -12,6 +12,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.GetCustomCredentialOption
 import androidx.credentials.CredentialManagerCallback
+import androidx.credentials.CustomCredential
 import androidx.credentials.PrepareGetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.gms.auth.api.identity.AuthorizationClient
@@ -38,24 +39,29 @@ private const val TAG = "AuthViewModel"
 class AuthViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val credentialManager: CredentialManager,
-    private val authorizationClient: AuthorizationClient
+    private val authorizationClient: AuthorizationClient,
+    /** Shared flow injected from NetworkModule */
+    private val authStateFlow: MutableStateFlow<AuthState>
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow(AuthState())
-    val authState: StateFlow<AuthState> = _authState
+    /** Expose read‑only AuthState to UI */
+    val authState: StateFlow<AuthState> = authStateFlow
 
     private val _error = MutableStateFlow<String?>(null)
     val errorState: StateFlow<String?> = _error
 
-    private fun parseEmail(token: String?): String? {
-        return token
+    private fun parseEmail(token: String?): String? =
+        token
             ?.split(".")
             ?.getOrNull(1)
             ?.let { String(Base64.decode(it, Base64.URL_SAFE)) }
             ?.let { json -> org.json.JSONObject(json).optString("email").takeIf { it.isNotEmpty() } }
+
+    /** Update the shared flow in one place */
+    private fun updateAuth(update: AuthState.() -> AuthState) {
+        authStateFlow.update(update)
     }
 
-    /** Silent one‑tap (no UI) */
     @RequiresApi(34)
     fun trySilentSignIn() {
         Log.d(TAG, "trySilentSignIn()")
@@ -63,28 +69,22 @@ class AuthViewModel @Inject constructor(
             .setServerClientId(context.getString(R.string.server_client_id))
             .setFilterByAuthorizedAccounts(true)
             .build()
-        val req = GetCredentialRequest.Builder()
-            .addCredentialOption(option)
-            .build()
+        val req = GetCredentialRequest.Builder().addCredentialOption(option).build()
 
         credentialManager.getCredentialAsync(
             context, req, null,
             ContextCompat.getMainExecutor(context),
             object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
                 override fun onResult(result: GetCredentialResponse) {
-                    val idToken = (result.credential as GoogleIdTokenCredential).idToken
-                    Log.d(TAG, "Silent sign‑in succeeded, token=$idToken")
-                    _authState.update { it.copy(idToken = idToken, email = parseEmail(idToken)) }
+                    handleIdCredential(result.credential)
                 }
                 override fun onError(e: GetCredentialException) {
-                    Log.d(TAG, "Silent sign‑in no credential: $e")
-                    // no saved credential → user must tap “Sign In”
+                    Log.d(TAG, "silent sign‑in: no credential", e)
                 }
             }
         )
     }
 
-    /** Interactive one‑tap “Sign In with Google” */
     @RequiresApi(34)
     fun signIn() {
         Log.d(TAG, "signIn()")
@@ -98,19 +98,42 @@ class AuthViewModel @Inject constructor(
             ContextCompat.getMainExecutor(context),
             object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
                 override fun onResult(result: GetCredentialResponse) {
-                    val idToken = (result.credential as GoogleIdTokenCredential).idToken
-                    Log.d(TAG, "Interactive sign‑in succeeded, token=$idToken")
-                    _authState.update { it.copy(idToken = idToken, email = parseEmail(idToken)) }
+                    Log.d(TAG, "signIn: credential=${result.credential::class.java.simpleName}")
+                    handleIdCredential(result.credential)
                 }
                 override fun onError(e: GetCredentialException) {
                     Log.e(TAG, "Interactive sign‑in failed", e)
-                    _error.value = "Sign‑in cancelled or failed"
+                    _error.value = context.getString(R.string.sign_in_failed)
                 }
             }
         )
     }
 
-    /** Request Drive appDataFolder consent (shows UI) */
+    private fun handleIdCredential(credential: androidx.credentials.Credential) {
+        when {
+            credential is GoogleIdTokenCredential -> {
+                val token = credential.idToken
+                updateAuth { copy(idToken = token, email = parseEmail(token)) }
+            }
+            credential is CustomCredential
+                    && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                try {
+                    // Convert the Bundle inside CustomCredential into a GoogleIdTokenCredential
+                    val idCred = GoogleIdTokenCredential.createFrom(credential.data)
+                    val token = idCred.idToken
+                    updateAuth { copy(idToken = token, email = parseEmail(token)) }
+                } catch (ex: Exception) {
+                    Log.e(TAG, "Failed to parse ID token", ex)
+                    _error.value = context.getString(R.string.invalid_token)
+                }
+            }
+            else -> {
+                Log.e(TAG, "Unknown credential type: ${credential::class.java}")
+                _error.value = context.getString(R.string.unsupported_credential)
+            }
+        }
+    }
+
     @RequiresApi(34)
     fun requestDriveAuth(onPendingIntent: (PendingIntent) -> Unit) {
         Log.d(TAG, "requestDriveAuth()")
@@ -119,40 +142,33 @@ class AuthViewModel @Inject constructor(
             .build()
         authorizationClient.authorize(req)
             .addOnSuccessListener { res: AuthorizationResult ->
-                if (res.hasResolution()) {
-                    Log.d(TAG, "Drive consent needs resolution")
-                    onPendingIntent(res.getPendingIntent()!!)
-                } else {
-                    Log.d(TAG, "Drive consent already granted")
-                    _authState.update { it.copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
-                }
+                if (res.hasResolution()) onPendingIntent(res.getPendingIntent()!!)
+                else updateAuth { copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Drive consent error", e)
-                _error.value = "Drive authorization failed"
+                _error.value = context.getString(R.string.drive_auth_failed)
             }
     }
 
-    /** Handle returned Drive‑consent Intent */
     @RequiresApi(34)
     fun handleDriveAuthResponse(data: Intent?) {
-        Log.d(TAG, "handleDriveAuthResponse(data=$data)")
+        Log.d(TAG, "handleDriveAuthResponse")
         if (data == null) {
-            Log.e(TAG, "No data in Drive consent result")
+            _error.value = context.getString(R.string.no_drive_data)
             return
         }
         val res = authorizationClient.getAuthorizationResultFromIntent(data)
         if (!res.hasResolution()) {
-            Log.d(TAG, "Drive consent granted, token=${res.accessToken}")
-            _authState.update { it.copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
+            updateAuth { copy(driveAuthorized = true, driveAccessToken = res.accessToken) }
         } else {
             Log.e(TAG, "Drive consent still needs resolution")
+            _error.value = context.getString(R.string.drive_consent_incomplete)
         }
     }
 
-    /** Sign‑out clears everything */
     fun signOut() {
         Log.d(TAG, "signOut()")
-        _authState.value = AuthState()
+        updateAuth { AuthState() }
     }
 }
