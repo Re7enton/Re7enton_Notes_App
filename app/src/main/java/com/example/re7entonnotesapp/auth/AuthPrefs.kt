@@ -19,16 +19,18 @@ private val Context.authPrefs by preferencesDataStore(name = "auth_prefs")
 class AuthPrefs(private val context: Context) {
     companion object {
         private val KEY_DRIVE_AUTH = booleanPreferencesKey("drive_authorized")
-        private val KEY_ID_TOKEN   = stringPreferencesKey("id_token")      // new
+        private val KEY_ID_TOKEN   = stringPreferencesKey("id_token")
     }
 
     /** Flow of persisted Drive‑authorized flag */
     val driveAuthorizedFlow: Flow<Boolean> =
-        context.authPrefs.data.map { prefs -> prefs[KEY_DRIVE_AUTH] ?: false }
+        context.authPrefs.data
+            .map { prefs -> prefs[KEY_DRIVE_AUTH] ?: false }
 
     /** Flow of persisted ID‑token (or null) */
     val idTokenFlow: Flow<String?> =
-        context.authPrefs.data.map { prefs -> prefs[KEY_ID_TOKEN] }
+        context.authPrefs.data
+            .map { prefs -> prefs[KEY_ID_TOKEN] }
 
     /** Save the Drive‑authorized flag */
     suspend fun setDriveAuthorized(value: Boolean) {

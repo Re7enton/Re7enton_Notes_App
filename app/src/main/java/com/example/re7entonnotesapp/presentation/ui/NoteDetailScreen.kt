@@ -27,30 +27,33 @@ fun NoteDetailScreen(
     onCancel: () -> Unit
 ) {
     val notes by notesFlow.collectAsState()
+    // find existing only if id >= 0
     val existing = remember(notes) { notes.find { it.id == noteId } }
 
-    // use noteId as key, not existing?.id
+    // use noteId as key: negative → new
     var title by rememberSaveable(noteId) { mutableStateOf("") }
     var content by rememberSaveable(noteId) { mutableStateOf("") }
 
-    LaunchedEffect(existing) {
+    LaunchedEffect(existing, noteId) {
         if (existing != null) {
             title = existing.title
             content = existing.content
         } else {
-            // new‑note: clear fields
+            // new‑note
             title = ""
             content = ""
         }
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().imePadding(),
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (noteId == 0L) stringResource(R.string.new_note)
+                        if (noteId < 0L) stringResource(R.string.new_note)
                         else stringResource(R.string.edit_note),
                         style = MaterialTheme.typography.titleLarge
                     )
@@ -61,7 +64,8 @@ fun NoteDetailScreen(
                     }
                 },
                 actions = {
-                    if (noteId != 0L) {
+                    // only show Delete if this is an existing note
+                    if (noteId >= 0L) {
                         IconButton(onClick = onDelete) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete))
                         }
