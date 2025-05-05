@@ -1,6 +1,7 @@
 package com.example.re7entonnotesapp.data.repository
 
 
+import android.util.Log
 import com.example.re7entonnotesapp.data.local.NoteDao
 import com.example.re7entonnotesapp.data.local.NoteEntity
 import com.example.re7entonnotesapp.data.mappers.toDto
@@ -17,81 +18,101 @@ import com.example.re7entonnotesapp.data.remote.NoteDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private const val TAG = "NoteRepositoryImpl"
+
 @Singleton
 class NoteRepositoryImpl @Inject constructor(
     private val dao: NoteDao,
     private val api: NotesApi
 ) : NoteRepository {
 
-    /** Emits local notes as domain models */
     override fun getNotes(): Flow<List<Note>> =
-        dao.observeAllNotes()                // use your existing method
-            .map { list -> list.map { it.toDomain() } }
+        dao.observeAllNotes()
+            .map { entities -> entities.map { it.toDomain() } }
 
-    /** Insert locally, then push to server */
     override suspend fun addNote(note: Note) {
-        val entity = note.toEntity()
-        dao.insertNote(entity)
-        api.addNote(entity.toDto())
+        val ent = note.toEntity()
+        dao.insertNote(ent)
+        api.addNote(ent.toDto())
     }
 
-    /** Remove locally, then delete remotely */
     override suspend fun deleteNote(id: Long) {
         dao.deleteNoteById(id)
         api.deleteNote(id)
     }
 
-    /** Two-way sync using only getNotes(), addNote(), deleteNote() */
     override suspend fun syncNotes() = withContext(Dispatchers.IO) {
-        // 1) load both sides
-        val remote: List<NoteDto>   = api.getNotes()
+        Log.d(TAG, "Starting syncNotes()")
+
+        // 1) fetch remote + local
+        val remote: List<NoteDto> = api.getNotes()
         val localEntities: List<NoteEntity> = dao.getAllNotesOnce()
-        val local:  List<NoteDto>   = localEntities.map { it.toDto() }
+        val local: List<NoteDto> = localEntities.map { it.toDto() }
+
+        Log.d(TAG, "Remote has ${remote.size} notes; local has ${localEntities.size}")
+
+        // ── EARLY‑OUT: fresh install → pull remote only ─────
+        if (localEntities.isEmpty() && remote.isNotEmpty()) {
+            Log.d(TAG, "Fresh install detected: pulling ${remote.size} remote notes into local DB")
+            remote.forEach { dto ->
+                dao.insertNote(dto.toEntity())
+            }
+            return@withContext
+        }
 
         // 2) index by id
         val remoteById = remote.associateBy { it.id }
         val localById  = local.associateBy  { it.id }
 
-        // 3) compute sets
-        val allIds    = (remoteById.keys + localById.keys)
-        val toAddOrUpdateRemotely = mutableListOf<NoteDto>()
-        val toDeleteRemotely     = mutableListOf<Long>()
-        val toAddOrUpdateLocally = mutableListOf<NoteDto>()
-        // no method to delete locally by id? use dao.deleteNoteById(id)
+        // 3) compute diffs
+        val allIds = remoteById.keys + localById.keys
+
+        val toPushUp   = mutableListOf<NoteDto>()
+        val toPullDown = mutableListOf<NoteDto>()
+        val toDeleteLocal = mutableListOf<Long>()
+        val toDeleteRemote = mutableListOf<Long>()
 
         for (id in allIds) {
             val r = remoteById[id]
             val l = localById[id]
 
             when {
-                r == null && l != null ->            // created locally
-                    toAddOrUpdateRemotely += l
-
-                l == null && r != null ->            // deleted locally
-                    toDeleteRemotely += id
-
-                l != null && r != null -> {          // exists both → compare timestamps
+                // created locally (never existed remotely)
+                r == null && l != null -> {
+                    Log.d(TAG, "Note $id created locally → will push up")
+                    toPushUp += l
+                }
+                // created remotely (never existed locally)
+                l == null && r != null -> {
+                    Log.d(TAG, "Note $id created remotely → will pull down")
+                    toPullDown += r
+                }
+                // exists both → compare timestamps
+                l != null && r != null -> {
                     if (l.updatedAt > r.updatedAt) {
-                        toAddOrUpdateRemotely += l       // local is newer → push up
+                        Log.d(TAG, "Note $id updated locally (ts ${l.updatedAt} > ${r.updatedAt}) → push up")
+                        toPushUp += l
                     } else if (r.updatedAt > l.updatedAt) {
-                        toAddOrUpdateLocally += r        // remote is newer → pull down
+                        Log.d(TAG, "Note $id updated remotely (ts ${r.updatedAt} > ${l.updatedAt}) → pull down")
+                        toPullDown += r
                     }
                 }
             }
         }
 
-        // 4) apply remote changes
-        toAddOrUpdateRemotely.forEach { api.addNote(it) }
-        toDeleteRemotely.forEach     { api.deleteNote(it) }
+        // 4) apply pushes
+        toPushUp.forEach { dto ->
+            api.addNote(dto)
+        }
 
-        // 5) apply local updates
-        //    create/update locally
-        toAddOrUpdateLocally.forEach { dto ->
-            dao.insertNote(dto.toEntity())        // REPLACE strategy updates existing row
+        // 5) apply pulls into local
+        toPullDown.forEach { dto ->
+            dao.insertNote(dto.toEntity())
         }
-        //    delete locally
-        toDeleteRemotely.forEach { id ->
-            dao.deleteNoteById(id)
-        }
+
+        // 6) handle deletes: if remote no longer has something local once existed?
+        //    (optional: you could track deletions separately; omitted here)
+
+        Log.d(TAG, "syncNotes() complete: pushed ${toPushUp.size}, pulled ${toPullDown.size}")
     }
 }

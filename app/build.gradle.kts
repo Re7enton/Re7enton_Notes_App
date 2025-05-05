@@ -91,6 +91,10 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.google.drive.services)      // ← DriveScopes lives here
     implementation(libs.google.api.client.gson)
+    // Preferences DataStore (key‑value)
+    implementation(libs.androidx.datastore.preferences)
+    // The “core” support that supplies booleanPreferencesKey & edit {…}
+    implementation(libs.androidx.datastore.preferences.core)
 
     testImplementation(libs.junit)
 
